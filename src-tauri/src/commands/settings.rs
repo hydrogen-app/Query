@@ -95,3 +95,20 @@ pub fn set_vim_mode_enabled(enabled: bool) -> Result<(), String> {
 pub fn get_vim_mode_enabled() -> Result<bool, String> {
     get_vim_mode_enabled_internal()
 }
+
+/// Verify we have access to the current project directory
+/// Returns true if accessible, false if not (e.g., sandbox permission lost)
+#[tauri::command]
+pub fn verify_project_access() -> Result<bool, String> {
+    let app_dir = crate::utils::get_app_dir()?;
+
+    // Try to read the directory to verify access
+    match std::fs::read_dir(&app_dir) {
+        Ok(_) => Ok(true),
+        Err(e) => {
+            // Permission denied or other access error
+            eprintln!("Cannot access project directory {:?}: {}", app_dir, e);
+            Ok(false)
+        }
+    }
+}

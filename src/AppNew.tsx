@@ -71,14 +71,51 @@ export default function AppNew() {
   // Initialize on mount
   useEffect(() => {
     async function initialize() {
-      await project.initializeProjectSettings();
-      await storage.loadSavedConnections();
-      storage.loadQueryHistory().catch((err) => console.error("Failed to load query history:", err));
-      storage.loadSavedQueries().catch((err) => console.error("Failed to load saved queries:", err));
-      await connection.autoConnect();
+      const hasAccess = await project.initializeProjectSettings();
+      if (hasAccess) {
+        // Only load data if we have access to the project directory
+        await storage.loadSavedConnections();
+        storage.loadQueryHistory().catch((err) => console.error("Failed to load query history:", err));
+        storage.loadSavedQueries().catch((err) => console.error("Failed to load saved queries:", err));
+        await connection.autoConnect();
+      }
     }
     initialize();
   }, []);
+
+  // Handle project reselection when access is lost (macOS sandbox)
+  useEffect(() => {
+    if (project.needsProjectReselection) {
+      connection.setStatus("Please re-select your project directory to restore access");
+      // Automatically open the directory picker
+      import("@tauri-apps/plugin-dialog")
+        .then(({ open }) => {
+          return open({
+            directory: true,
+            multiple: false,
+            title: "Re-select Project Directory (access was lost)",
+            defaultPath: project.currentProjectPath || undefined,
+          }).then(async (selected) => {
+            if (selected) {
+              await project.changeProject(selected);
+              // Reload all data after re-selection
+              await storage.loadSavedConnections();
+              await storage.loadQueryHistory();
+              await storage.loadSavedQueries();
+              connection.setStatus("Project directory access restored");
+            } else {
+              // User cancelled - show message but don't keep prompting
+              project.clearReselectionFlag();
+              connection.setStatus("Project access not restored - using default location");
+            }
+          });
+        })
+        .catch((err) => {
+          console.error("Failed to open directory picker:", err);
+          project.clearReselectionFlag();
+        });
+    }
+  }, [project.needsProjectReselection]);
 
   // Keyboard shortcuts
   useEffect(() => {

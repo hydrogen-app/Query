@@ -101,6 +101,7 @@ pub fn run() {
             get_vim_mode_enabled,
             get_recent_projects,
             remove_recent_project,
+            verify_project_access,
             // Connection storage commands
             save_connections,
             load_connections,

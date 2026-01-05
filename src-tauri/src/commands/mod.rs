@@ -15,5 +15,5 @@ pub use settings::{
     get_current_project_path, get_last_connection, load_connections, load_project_settings,
     save_connection_password, save_connections, set_auto_connect_enabled, set_last_connection,
     set_project_path, get_recent_projects, remove_recent_project, get_vim_mode_enabled,
-    set_vim_mode_enabled,
+    set_vim_mode_enabled, verify_project_access,
 };

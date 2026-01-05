@@ -167,6 +167,10 @@ export async function getAppDir(): Promise<string> {
   return await invoke<string>("get_app_dir");
 }
 
+export async function verifyProjectAccess(): Promise<boolean> {
+  return await invoke<boolean>("verify_project_access");
+}
+
 export async function getAutoConnectEnabled(): Promise<boolean> {
   return await invoke<boolean>("get_auto_connect_enabled");
 }
