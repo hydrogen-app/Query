@@ -1,6 +1,7 @@
 import { useEffect, useCallback } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { UI_LAYOUT, MACOS_TITLEBAR_LEFT_PADDING } from "./constants";
 import { getAppDir, getConnectionPassword } from "./utils/tauri";
 import {
@@ -117,35 +118,6 @@ export default function AppNew() {
     }
   }, [project.needsProjectReselection]);
 
-  // Keyboard shortcuts
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Cmd+K: Command palette
-      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
-        e.preventDefault();
-        modals.toggleModal("commandPalette");
-      }
-      // Cmd+B: Query Builder
-      if ((e.metaKey || e.ctrlKey) && e.key === "b") {
-        e.preventDefault();
-        modals.toggleModal("queryBuilder");
-      }
-      // Cmd+,: Settings
-      if ((e.metaKey || e.ctrlKey) && e.key === ",") {
-        e.preventDefault();
-        modals.toggleModal("settings");
-      }
-      // Cmd+Shift+F: Toggle full-screen results
-      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === "F") {
-        e.preventDefault();
-        layout.toggleFullScreenResults();
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [modals, layout]);
-
   // Listen for menu events to reveal project directory
   useEffect(() => {
     const unlisten = listen("reveal-project-directory", async () => {
@@ -256,6 +228,81 @@ export default function AppNew() {
     );
     connection.setStatus(status);
   }, [queryExecution, connection, layout.readOnlyMode, storage]);
+
+  // Keyboard shortcuts (must be after runQuery is defined)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const isModalOpen = modals.isAnyModalOpen();
+
+      // Cmd+W: Close active modal (works even when modal is open)
+      if ((e.metaKey || e.ctrlKey) && e.key === "w") {
+        if (modals.closeActiveModal()) {
+          e.preventDefault();
+          return;
+        }
+        // If no modal was closed, let the default behavior happen
+      }
+
+      // Cmd+H: Hide app (standard macOS behavior)
+      if ((e.metaKey || e.ctrlKey) && e.key === "h" && !e.shiftKey) {
+        e.preventDefault();
+        getCurrentWindow().hide();
+        return;
+      }
+
+      // Block most shortcuts when a modal is open
+      if (isModalOpen) {
+        return;
+      }
+
+      // Cmd+K: Command palette
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        modals.toggleModal("commandPalette");
+      }
+      // Cmd+Shift+B: Query Builder (sidebar uses Cmd+B)
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === "b") {
+        e.preventDefault();
+        modals.toggleModal("queryBuilder");
+      }
+      // Cmd+,: Settings
+      if ((e.metaKey || e.ctrlKey) && e.key === ",") {
+        e.preventDefault();
+        modals.toggleModal("settings");
+      }
+      // Cmd+Shift+F: Toggle full-screen results
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === "F") {
+        e.preventDefault();
+        layout.toggleFullScreenResults();
+      }
+      // Cmd+Enter: Run query (global - works even outside editor)
+      if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+        e.preventDefault();
+        runQuery();
+      }
+      // Cmd+S: Save query
+      if ((e.metaKey || e.ctrlKey) && e.key === "s") {
+        e.preventDefault();
+        modals.openModal("saveModal");
+      }
+      // Cmd+N: New connection
+      if ((e.metaKey || e.ctrlKey) && e.key === "n") {
+        e.preventDefault();
+        modals.setEditingConnection(null);
+        modals.openModal("connectionModal");
+      }
+      // Cmd+Shift+C: Connection picker (quick switch)
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === "C") {
+        e.preventDefault();
+        // Focus the connection dropdown - for now, just open command palette
+        // which has connection switching capabilities
+        modals.openModal("commandPalette");
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [modals, layout, runQuery]);
 
   const handleProjectPathChanged = useCallback(async () => {
     await project.loadCurrentProjectPath();
@@ -494,7 +541,7 @@ export default function AppNew() {
               size="sm"
               onClick={() => modals.openModal("queryBuilder")}
               className="h-7 gap-1.5"
-              title="Query Builder"
+              title="Query Builder (Cmd+Shift+B)"
             >
               <Wand2 className="h-3 w-3" />
               <span className="text-xs">Build</span>
@@ -541,6 +588,10 @@ export default function AppNew() {
           />
 
           <SidebarInset className="flex flex-1 flex-col min-h-0">
+            <header
+              data-tauri-drag-region
+              className="flex h-9 shrink-0 items-center gap-2 border-b border-border bg-card px-3 z-20"
+            >
             {/* Left side */}
             <div data-tauri-drag-region="false">
               <SidebarTrigger />
@@ -701,7 +752,7 @@ export default function AppNew() {
                 size="sm"
                 onClick={() => modals.openModal("queryBuilder")}
                 className="h-7 gap-1.5"
-                title="Query Builder"
+                title="Query Builder (Cmd+Shift+B)"
               >
                 <Wand2 className="h-3 w-3" />
                 <span className="text-xs">Build</span>
@@ -750,7 +801,7 @@ export default function AppNew() {
                             variant="ghost"
                             size="sm"
                             onClick={() => modals.openModal("saveModal")}
-                            title="Save Query"
+                            title="Save Query (Cmd+S)"
                           >
                             <Save className="h-3 w-3 mr-1" />
                           </Button>
@@ -759,7 +810,7 @@ export default function AppNew() {
                             onClick={runQuery}
                             disabled={queryExecution.loading || connection.loading}
                             className="gap-2"
-                            title="Run Query"
+                            title="Run Query (Cmd+Enter)"
                           >
                             <Play className="h-3 w-3" />
                           </Button>
@@ -776,6 +827,7 @@ export default function AppNew() {
                             queryExecution.setInsertSnippet(insertSnip);
                           }}
                           vimMode={layout.vimMode}
+                          onToggleCommandPalette={() => modals.toggleModal("commandPalette")}
                         />
                       </div>
                       {connection.status && (
@@ -857,6 +909,7 @@ export default function AppNew() {
             </ResizablePanelGroup>
           </div>
         </SidebarInset>
+      </div>
       </div>
 
       {/* Modals */}

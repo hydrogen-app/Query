@@ -2,7 +2,7 @@
 export const SHORTCUTS = {
   // Command Palette
   COMMAND_PALETTE: {
-    key: "k",
+    key: "K",
     modifier: "Cmd",
     description: "Open command palette",
   },
@@ -18,13 +18,65 @@ export const SHORTCUTS = {
   EXECUTE_QUERY: {
     key: "Enter",
     modifier: "Cmd",
-    description: "Execute query",
+    description: "Execute query (works globally)",
   },
 
   COMMENT_LINE: {
     key: "/",
     modifier: "Cmd",
     description: "Toggle comment",
+  },
+
+  // Query Management
+  SAVE_QUERY: {
+    key: "S",
+    modifier: "Cmd",
+    description: "Save current query",
+  },
+
+  // Navigation
+  QUERY_BUILDER: {
+    key: "B",
+    modifier: "Cmd+Shift",
+    description: "Open query builder",
+  },
+
+  TOGGLE_SIDEBAR: {
+    key: "B",
+    modifier: "Cmd",
+    description: "Toggle sidebar",
+  },
+
+  SETTINGS: {
+    key: ",",
+    modifier: "Cmd",
+    description: "Open settings",
+  },
+
+  FULLSCREEN_RESULTS: {
+    key: "F",
+    modifier: "Cmd+Shift",
+    description: "Toggle full-screen results",
+  },
+
+  // Window Management
+  HIDE_APP: {
+    key: "H",
+    modifier: "Cmd",
+    description: "Hide application (macOS)",
+  },
+
+  CLOSE_MODAL: {
+    key: "W",
+    modifier: "Cmd",
+    description: "Close active modal",
+  },
+
+  // New Items
+  NEW_CONNECTION: {
+    key: "N",
+    modifier: "Cmd",
+    description: "Create new connection",
   },
 } as const;
 

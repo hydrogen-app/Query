@@ -122,9 +122,16 @@ export const ConnectionModal = memo(function ConnectionModal({
     onSave(config);
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      handleSave();
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px]" onKeyDown={handleKeyDown}>
         <DialogHeader>
           <DialogTitle>
             {initialConnection ? "Edit Connection" : DEFAULT_CONNECTION.name || "New Connection"}
@@ -179,6 +186,7 @@ export const ConnectionModal = memo(function ConnectionModal({
               placeholder="My Database"
               value={config.name}
               onChange={(e) => setConfig({ ...config, name: e.target.value })}
+              autoFocus
             />
           </div>
 
@@ -281,11 +289,14 @@ export const ConnectionModal = memo(function ConnectionModal({
           </div>
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button onClick={handleSave}>Save Connection</Button>
+        <DialogFooter className="flex items-center justify-between sm:justify-between">
+          <span className="text-xs text-muted-foreground">⌘↵ to save</span>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button onClick={handleSave}>Save Connection</Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>

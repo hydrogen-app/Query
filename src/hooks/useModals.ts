@@ -30,6 +30,8 @@ interface UseModalsReturn {
   closeModal: (name: ModalName) => void;
   toggleModal: (name: ModalName) => void;
   closeAllModals: () => void;
+  isAnyModalOpen: () => boolean;
+  closeActiveModal: () => boolean;
 }
 
 const initialState: ModalState = {
@@ -68,6 +70,39 @@ export function useModals(): UseModalsReturn {
     setEditingConnection(null);
   }, []);
 
+  // Check if any modal is open (excludes ERD which is a panel, not a modal)
+  const isAnyModalOpen = useCallback(() => {
+    return (
+      modals.saveModal ||
+      modals.commandPalette ||
+      modals.queryBuilder ||
+      modals.connectionModal ||
+      modals.settings ||
+      modals.schemaComparison ||
+      modals.projectPicker
+    );
+  }, [modals]);
+
+  // Close the first active modal (for Cmd+W), returns true if a modal was closed
+  const closeActiveModal = useCallback(() => {
+    const modalPriority: ModalName[] = [
+      "commandPalette",
+      "queryBuilder",
+      "saveModal",
+      "connectionModal",
+      "settings",
+      "projectPicker",
+      "schemaComparison",
+    ];
+    for (const name of modalPriority) {
+      if (modals[name]) {
+        closeModal(name);
+        return true;
+      }
+    }
+    return false;
+  }, [modals, closeModal]);
+
   return {
     modals,
     editingConnection,
@@ -76,5 +111,7 @@ export function useModals(): UseModalsReturn {
     closeModal,
     toggleModal,
     closeAllModals,
+    isAnyModalOpen,
+    closeActiveModal,
   };
 }

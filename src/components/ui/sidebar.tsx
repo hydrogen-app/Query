@@ -29,7 +29,7 @@ const SIDEBAR_WIDTH = "16rem"
 const SIDEBAR_WIDTH_MOBILE = "18rem"
 const SIDEBAR_WIDTH_ICON = "3rem"
 const SIDEBAR_KEYBOARD_SHORTCUT = "b"
-const HEADER_HEIGHT = "36px" // h-9 = 2.25rem = 36px
+// Header height is 36px (h-9 = 2.25rem)
 
 type SidebarContextProps = {
   state: "expanded" | "collapsed"

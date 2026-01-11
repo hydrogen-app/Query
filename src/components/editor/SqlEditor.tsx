@@ -14,12 +14,14 @@ interface SqlEditorProps {
     insertSnippet: (snippet: string) => void
   ) => void;
   vimMode?: boolean;
+  onToggleCommandPalette?: () => void;
 }
 
-export const SqlEditor = memo(function SqlEditor({ value, onChange, onRunQuery, schema, onEditorReady, vimMode = false }: SqlEditorProps) {
+export const SqlEditor = memo(function SqlEditor({ value, onChange, onRunQuery, schema, onEditorReady, vimMode = false, onToggleCommandPalette }: SqlEditorProps) {
   const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
   const schemaRef = useRef(schema);
   const onRunQueryRef = useRef(onRunQuery);
+  const onToggleCommandPaletteRef = useRef(onToggleCommandPalette);
   const completionProviderRef = useRef<Monaco.IDisposable | null>(null);
   const vimModeRef = useRef<{ dispose: () => void } | null>(null);
 
@@ -31,6 +33,10 @@ export const SqlEditor = memo(function SqlEditor({ value, onChange, onRunQuery, 
   useEffect(() => {
     onRunQueryRef.current = onRunQuery;
   }, [onRunQuery]);
+
+  useEffect(() => {
+    onToggleCommandPaletteRef.current = onToggleCommandPalette;
+  }, [onToggleCommandPalette]);
 
   // Cleanup completion provider on unmount
   useEffect(() => {
@@ -182,6 +188,11 @@ export const SqlEditor = memo(function SqlEditor({ value, onChange, onRunQuery, 
     // Cmd+/ to comment
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Slash, () => {
       editor.trigger('keyboard', 'editor.action.commentLine', {});
+    });
+
+    // Cmd+K to open command palette (works inside editor)
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyK, () => {
+      onToggleCommandPaletteRef.current?.();
     });
 
     // Register completion provider with schema (dispose old one first if exists)
