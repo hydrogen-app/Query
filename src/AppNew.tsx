@@ -327,32 +327,220 @@ export default function AppNew() {
 
   return (
     <SidebarProvider>
-      <div className="flex h-screen w-full">
-        <AppSidebar
-          schema={connection.schema}
-          availableSchemas={connection.availableSchemas}
-          selectedSchema={connection.selectedSchema}
-          onSchemaChange={connection.switchSchema}
-          history={storage.history}
-          savedQueries={storage.savedQueries}
-          onTableClick={queryExecution.handleTableClick}
-          onColumnClick={queryExecution.handleColumnClick}
-          onSelectQuery={queryExecution.setQuery}
-          onDeleteQuery={handleDeleteSavedQuery}
-          onTogglePin={handleTogglePin}
-          onClearHistory={handleClearHistory}
-          onTableInsert={queryExecution.handleTableInsert}
-          onTableUpdate={queryExecution.handleTableUpdate}
-          onTableDelete={queryExecution.handleTableDelete}
-        />
+      <div className="flex flex-col h-screen w-full">
+        {/* Full-width Header */}
+        <header
+          data-tauri-drag-region
+          className="flex h-9 shrink-0 items-center gap-2 border-b border-border bg-card px-3 z-20"
+          style={{ paddingLeft: `${MACOS_TITLEBAR_LEFT_PADDING}px` }}
+        >
+          {/* Sidebar toggle */}
+          <div data-tauri-drag-region="false">
+            <SidebarTrigger />
+          </div>
+          <Separator orientation="vertical" className="h-5" />
 
-        <SidebarInset className="flex flex-1 flex-col">
-          {/* Header */}
-          <header
-            data-tauri-drag-region
-            className="flex h-9 items-center gap-2 border-b border-border/50 bg-card/50 backdrop-blur-sm px-3"
-            style={{ paddingLeft: `${MACOS_TITLEBAR_LEFT_PADDING}px` }}
-          >
+          {/* Environment/Connection Dropdown */}
+          <div data-tauri-drag-region="false" className="min-w-[180px]">
+            <Select value={connection.config.name} onValueChange={handleConnectionChange}>
+              <SelectTrigger className="h-7 border-none shadow-none text-sm font-medium hover:bg-accent transition-colors">
+                <div className="flex items-center gap-2">
+                  <span className="relative flex h-2 w-2">
+                    {connection.connected && (
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-status-success opacity-75" />
+                    )}
+                    <span className={`relative inline-flex h-2 w-2 rounded-full ${
+                      connection.connected ? "bg-status-success" : "bg-muted-foreground/50"
+                    }`} />
+                  </span>
+                  <SelectValue placeholder="No connection" />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                {storage.connections.map((conn) => (
+                  <SelectItem key={conn.name} value={conn.name}>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`h-2 w-2 rounded-full ${
+                          conn.name === connection.config.name && connection.connected
+                            ? "bg-status-success"
+                            : "bg-muted-foreground/50"
+                        }`}
+                      />
+                      {conn.name}
+                    </div>
+                  </SelectItem>
+                ))}
+                <SelectItem value="__new__">
+                  <div className="flex items-center gap-2">
+                    <Plus className="h-3 w-3" />
+                    <span>New Connection</span>
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <Separator orientation="vertical" className="h-5" />
+
+          {/* Project Selector Dropdown */}
+          <div data-tauri-drag-region="false" className="min-w-[150px]">
+            <Select
+              value={project.currentProjectPath || "default"}
+              onValueChange={(value) => {
+                if (value === "__browse__") {
+                  import("@tauri-apps/plugin-dialog")
+                    .then(({ open }) => {
+                      return open({
+                        directory: true,
+                        multiple: false,
+                        title: "Select Project Directory",
+                      }).then((selected) => {
+                        if (selected) {
+                          handleProjectChange(selected);
+                        }
+                      });
+                    })
+                    .catch((err) => {
+                      console.error("Failed to open file dialog:", err);
+                      connection.setStatus("Failed to open file dialog");
+                    });
+                } else if (value !== "default") {
+                  handleProjectChange(value);
+                }
+              }}
+            >
+              <SelectTrigger className="h-7 border-none shadow-none text-sm hover:bg-accent">
+                <div className="flex items-center gap-2">
+                  <Folder className="h-3 w-3 text-muted-foreground" />
+                  <SelectValue placeholder="Project" />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                {project.recentProjects.length > 0 ? (
+                  project.recentProjects.map((proj) => (
+                    <SelectItem key={proj.path} value={proj.path}>
+                      {proj.name || proj.path.split("/").pop() || "Project"}
+                    </SelectItem>
+                  ))
+                ) : (
+                  <SelectItem value="default" disabled>
+                    <span className="text-xs text-muted-foreground">No recent projects</span>
+                  </SelectItem>
+                )}
+                <SelectItem value="__browse__">
+                  <div className="flex items-center gap-2">
+                    <Folder className="h-3 w-3" />
+                    <span>Browse...</span>
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <Separator orientation="vertical" className="h-5" />
+
+          {/* Read-only mode toggle */}
+          <div data-tauri-drag-region="false">
+            <Button
+              variant={layout.readOnlyMode ? "default" : "ghost"}
+              size="sm"
+              onClick={() => layout.setReadOnlyMode(!layout.readOnlyMode)}
+              title={
+                layout.readOnlyMode ? "Read-only mode active" : "Enable read-only mode"
+              }
+              className="h-7 gap-1.5"
+            >
+              {layout.readOnlyMode ? (
+                <Lock className="h-3 w-3" />
+              ) : (
+                <Unlock className="h-3 w-3" />
+              )}
+              <span className="text-xs">Read-only</span>
+            </Button>
+          </div>
+
+          {/* Right side */}
+          <div className="ml-auto flex items-center gap-1.5" data-tauri-drag-region="false">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={layout.toggleLayoutDirection}
+              title={`Switch to ${layout.layoutDirection === "vertical" ? "horizontal" : "vertical"} layout`}
+              className="h-7 w-7"
+            >
+              <LayoutGrid className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              variant={modals.modals.erd ? "default" : "ghost"}
+              size="icon"
+              onClick={() => modals.toggleModal("erd")}
+              title="Toggle ERD (Entity Relationship Diagram)"
+              className="h-7 w-7"
+            >
+              <Database className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => modals.openModal("commandPalette")}
+              className="h-7 gap-1.5"
+            >
+              <Command className="h-3 w-3" />
+              <span className="text-xs font-mono">K</span>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => modals.openModal("queryBuilder")}
+              className="h-7 gap-1.5"
+              title="Query Builder"
+            >
+              <Wand2 className="h-3 w-3" />
+              <span className="text-xs">Build</span>
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => modals.openModal("schemaComparison")}
+              className="h-7 w-7"
+              title="Compare Schemas"
+            >
+              <GitCompareArrows className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => modals.openModal("settings")}
+              className="h-7 w-7"
+              title="Settings (Cmd+,)"
+            >
+              <SettingsIcon className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        </header>
+
+        {/* Main area with sidebar and content */}
+        <div className="flex flex-1 min-h-0">
+          <AppSidebar
+            schema={connection.schema}
+            availableSchemas={connection.availableSchemas}
+            selectedSchema={connection.selectedSchema}
+            onSchemaChange={connection.switchSchema}
+            history={storage.history}
+            savedQueries={storage.savedQueries}
+            onTableClick={queryExecution.handleTableClick}
+            onColumnClick={queryExecution.handleColumnClick}
+            onSelectQuery={queryExecution.setQuery}
+            onDeleteQuery={handleDeleteSavedQuery}
+            onTogglePin={handleTogglePin}
+            onClearHistory={handleClearHistory}
+            onTableInsert={queryExecution.handleTableInsert}
+            onTableUpdate={queryExecution.handleTableUpdate}
+            onTableDelete={queryExecution.handleTableDelete}
+          />
+
+          <SidebarInset className="flex flex-1 flex-col min-h-0">
             {/* Left side */}
             <div data-tauri-drag-region="false">
               <SidebarTrigger />
