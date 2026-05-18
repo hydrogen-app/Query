@@ -19,13 +19,17 @@ import { Input } from "../ui/input";
 import { ScrollArea } from "../ui/scroll-area";
 import { Separator } from "../ui/separator";
 import { Badge } from "../ui/badge";
+import { Checkbox } from "../ui/checkbox";
 import {
   Edit3,
   Trash2,
   Folder,
   FolderOpen,
+  Plus,
 } from "lucide-react";
 import type { ConnectionConfig, RecentProject } from "../../types";
+import type { RequestEnvironment } from "../../hooks";
+import type { QueryParameter } from "../../utils/queryRequest";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
@@ -49,6 +53,18 @@ interface SettingsProps {
   onDeleteConnection: (name: string) => Promise<void>;
   onEditConnection: (connection: ConnectionConfig) => void;
   onNewConnection: () => void;
+  // Environment settings
+  environments: RequestEnvironment[];
+  activeEnvironmentId: string;
+  activeVariables: Record<string, string>;
+  params: QueryParameter[];
+  onEnvironmentChange: (id: string) => void;
+  onAddEnvironment: () => void;
+  onVariableChange: (name: string, value: string) => void;
+  onVariableRename: (oldName: string, newName: string) => void;
+  onAddVariable: () => void;
+  onParamValueChange: (name: string, value: string) => void;
+  onParamEnabledChange: (name: string, enabled: boolean) => void;
 }
 
 export const Settings = memo(function Settings({
@@ -66,7 +82,22 @@ export const Settings = memo(function Settings({
   onDeleteConnection,
   onEditConnection,
   onNewConnection,
+  environments,
+  activeEnvironmentId,
+  activeVariables,
+  params,
+  onEnvironmentChange,
+  onAddEnvironment,
+  onVariableChange,
+  onVariableRename,
+  onAddVariable,
+  onParamValueChange,
+  onParamEnabledChange,
 }: SettingsProps) {
+  const variableEntries = Object.entries(activeVariables).sort(([a], [b]) =>
+    a.localeCompare(b)
+  );
+
   const [isChangingPath, setIsChangingPath] = useState(false);
   const [autoConnectEnabled, setAutoConnectEnabled] = useState(false);
   const [lastConnectionName, setLastConnectionName] = useState<string | null>(null);
@@ -170,7 +201,7 @@ export const Settings = memo(function Settings({
         </DialogHeader>
 
         <Tabs defaultValue="general" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="general" className="gap-2">
               General
             </TabsTrigger>
@@ -179,6 +210,9 @@ export const Settings = memo(function Settings({
             </TabsTrigger>
             <TabsTrigger value="display" className="gap-2">
               Display
+            </TabsTrigger>
+            <TabsTrigger value="environments" className="gap-2">
+              Environments
             </TabsTrigger>
             <TabsTrigger value="connections" className="gap-2">
               Connections
@@ -389,6 +423,115 @@ export const Settings = memo(function Settings({
                       />
                     </div>
                   </div>
+                </div>
+              </div>
+            </TabsContent>
+
+            {/* Environments Tab */}
+            <TabsContent value="environments" className="space-y-6 px-1">
+              <div className="space-y-4">
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-medium">Active Environment</h3>
+                    <Button variant="outline" size="sm" onClick={onAddEnvironment} className="gap-1.5">
+                      <Plus className="h-3.5 w-3.5" />
+                      Add Environment
+                    </Button>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {environments.map((environment) => (
+                      <Button
+                        key={environment.id}
+                        variant={environment.id === activeEnvironmentId ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => onEnvironmentChange(environment.id)}
+                      >
+                        {environment.name}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
+                <Separator />
+
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <h3 className="text-sm font-medium">Variables</h3>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Reusable values for the selected environment
+                      </p>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={onAddVariable} className="gap-1.5">
+                      <Plus className="h-3.5 w-3.5" />
+                      Add Variable
+                    </Button>
+                  </div>
+                  {variableEntries.length > 0 ? (
+                    <div className="space-y-2">
+                      {variableEntries.map(([name, value]) => (
+                        <div
+                          key={name}
+                          className="flex items-center gap-2 rounded-md border bg-card px-2 py-1.5"
+                        >
+                          <Input
+                            defaultValue={name}
+                            onBlur={(event) => onVariableRename(name, event.target.value)}
+                            className="h-7 w-40 font-mono text-xs"
+                          />
+                          <Input
+                            value={value}
+                            onChange={(event) => onVariableChange(name, event.target.value)}
+                            className="h-7 flex-1 text-xs"
+                            placeholder="value"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="rounded-md border border-dashed px-3 py-4 text-center text-xs text-muted-foreground">
+                      No variables in this environment
+                    </div>
+                  )}
+                </div>
+
+                <Separator />
+
+                <div>
+                  <h3 className="text-sm font-medium mb-1">Query Params</h3>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    Template variables extracted from the current query
+                  </p>
+                  {params.length > 0 ? (
+                    <div className="space-y-2">
+                      {params.map((param) => (
+                        <div
+                          key={param.name}
+                          className="flex items-center gap-2 rounded-md border bg-card px-2 py-1.5"
+                        >
+                          <Checkbox
+                            checked={param.enabled}
+                            onCheckedChange={(checked) =>
+                              onParamEnabledChange(param.name, checked === true)
+                            }
+                          />
+                          <span className="w-40 truncate font-mono text-xs text-muted-foreground">
+                            {param.name}
+                          </span>
+                          <Input
+                            value={param.value}
+                            onChange={(event) => onParamValueChange(param.name, event.target.value)}
+                            className="h-7 flex-1 text-xs"
+                            placeholder="value"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="rounded-md border border-dashed px-3 py-4 text-center text-xs text-muted-foreground">
+                      No template params in the current query
+                    </div>
+                  )}
                 </div>
               </div>
             </TabsContent>

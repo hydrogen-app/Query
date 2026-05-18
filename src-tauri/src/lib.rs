@@ -21,14 +21,65 @@ fn greet(name: &str) -> String {
 pub fn run() {
     tauri::Builder::default()
         .setup(|app| {
-            // Create "Open Project Directory..." menu item
+            // === File Menu Items ===
+            let new_connection = MenuItemBuilder::new("New Connection")
+                .id("new_connection")
+                .accelerator("CmdOrCtrl+N")
+                .build(app)?;
+
+            let save_query = MenuItemBuilder::new("Save Query")
+                .id("save_query")
+                .accelerator("CmdOrCtrl+S")
+                .build(app)?;
+
             let open_project = MenuItemBuilder::new("Open Project Directory...")
                 .id("open_project")
                 .accelerator("CmdOrCtrl+Shift+O")
                 .build(app)?;
 
-            // Create File submenu
+            // === View Menu Items ===
+            let command_palette = MenuItemBuilder::new("Command Palette")
+                .id("command_palette")
+                .accelerator("CmdOrCtrl+K")
+                .build(app)?;
+
+            let toggle_sidebar = MenuItemBuilder::new("Toggle Sidebar")
+                .id("toggle_sidebar")
+                .accelerator("CmdOrCtrl+B")
+                .build(app)?;
+
+            let toggle_fullscreen = MenuItemBuilder::new("Toggle Full-screen Results")
+                .id("toggle_fullscreen")
+                .accelerator("CmdOrCtrl+Shift+F")
+                .build(app)?;
+
+            let settings = MenuItemBuilder::new("Settings...")
+                .id("settings")
+                .accelerator("CmdOrCtrl+,")
+                .build(app)?;
+
+            // === Query Menu Items ===
+            let run_query = MenuItemBuilder::new("Run Query")
+                .id("run_query")
+                .accelerator("CmdOrCtrl+Enter")
+                .build(app)?;
+
+            let connection_picker = MenuItemBuilder::new("Switch Connection")
+                .id("connection_picker")
+                .accelerator("CmdOrCtrl+Shift+C")
+                .build(app)?;
+
+            // === Window Menu Items ===
+            let close_modal = MenuItemBuilder::new("Close Panel")
+                .id("close_modal")
+                .accelerator("CmdOrCtrl+W")
+                .build(app)?;
+
+            // === Build Submenus ===
             let file_submenu = SubmenuBuilder::new(app, "File")
+                .item(&new_connection)
+                .item(&save_query)
+                .separator()
                 .item(&open_project)
                 .separator()
                 .item(&PredefinedMenuItem::close_window(app, None)?)
@@ -36,7 +87,6 @@ pub fn run() {
                 .item(&PredefinedMenuItem::quit(app, None)?)
                 .build()?;
 
-            // Create Edit submenu with standard shortcuts (required for clipboard on macOS)
             let edit_submenu = SubmenuBuilder::new(app, "Edit")
                 .item(&PredefinedMenuItem::undo(app, None)?)
                 .item(&PredefinedMenuItem::redo(app, None)?)
@@ -47,19 +97,57 @@ pub fn run() {
                 .item(&PredefinedMenuItem::select_all(app, None)?)
                 .build()?;
 
+            let view_submenu = SubmenuBuilder::new(app, "View")
+                .item(&command_palette)
+                .separator()
+                .item(&toggle_sidebar)
+                .item(&toggle_fullscreen)
+                .separator()
+                .item(&settings)
+                .build()?;
+
+            let query_submenu = SubmenuBuilder::new(app, "Query")
+                .item(&run_query)
+                .separator()
+                .item(&connection_picker)
+                .build()?;
+
+            let window_submenu = SubmenuBuilder::new(app, "Window")
+                .item(&close_modal)
+                .separator()
+                .item(&PredefinedMenuItem::minimize(app, None)?)
+                .item(&PredefinedMenuItem::hide(app, None)?)
+                .build()?;
+
             // Build complete menu
             let menu = MenuBuilder::new(app)
                 .item(&file_submenu)
                 .item(&edit_submenu)
+                .item(&view_submenu)
+                .item(&query_submenu)
+                .item(&window_submenu)
                 .build()?;
 
             app.set_menu(menu)?;
 
-            // Handle menu item clicks
+            // Handle menu item clicks - emit events to frontend
             app.on_menu_event(move |app, event| {
-                if event.id() == "open_project" {
-                    // Emit event to frontend to reveal project directory
-                    let _ = app.emit("reveal-project-directory", ());
+                let event_name = match event.id().0.as_str() {
+                    "open_project" => Some("reveal-project-directory"),
+                    "new_connection" => Some("menu-new-connection"),
+                    "save_query" => Some("menu-save-query"),
+                    "command_palette" => Some("menu-command-palette"),
+                    "toggle_sidebar" => Some("menu-toggle-sidebar"),
+                    "toggle_fullscreen" => Some("menu-toggle-fullscreen"),
+                    "settings" => Some("menu-settings"),
+                    "run_query" => Some("menu-run-query"),
+                    "connection_picker" => Some("menu-connection-picker"),
+                    "close_modal" => Some("menu-close-modal"),
+                    _ => None,
+                };
+
+                if let Some(name) = event_name {
+                    let _ = app.emit(name, ());
                 }
             });
 

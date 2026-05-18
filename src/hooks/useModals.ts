@@ -4,7 +4,6 @@ import type { ConnectionConfig } from "../types";
 export type ModalName =
   | "saveModal"
   | "commandPalette"
-  | "queryBuilder"
   | "connectionModal"
   | "settings"
   | "schemaComparison"
@@ -14,7 +13,6 @@ export type ModalName =
 interface ModalState {
   saveModal: boolean;
   commandPalette: boolean;
-  queryBuilder: boolean;
   connectionModal: boolean;
   settings: boolean;
   schemaComparison: boolean;
@@ -37,7 +35,6 @@ interface UseModalsReturn {
 const initialState: ModalState = {
   saveModal: false,
   commandPalette: false,
-  queryBuilder: false,
   connectionModal: false,
   settings: false,
   schemaComparison: false,
@@ -75,7 +72,6 @@ export function useModals(): UseModalsReturn {
     return (
       modals.saveModal ||
       modals.commandPalette ||
-      modals.queryBuilder ||
       modals.connectionModal ||
       modals.settings ||
       modals.schemaComparison ||
@@ -87,7 +83,6 @@ export function useModals(): UseModalsReturn {
   const closeActiveModal = useCallback(() => {
     const modalPriority: ModalName[] = [
       "commandPalette",
-      "queryBuilder",
       "saveModal",
       "connectionModal",
       "settings",

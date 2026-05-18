@@ -1,7 +1,7 @@
 import "./App.css";
 import React from "react";
 import ReactDOM from "react-dom/client";
-import App from "./AppNew";
+import App from "./App";
 import { Toaster } from "./components/ui/sonner";
 import ErrorBoundary from "./components/ErrorBoundary";
 
