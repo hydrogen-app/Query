@@ -142,6 +142,14 @@ export async function togglePinQuery(id: number): Promise<void> {
   await invoke("toggle_pin_query", { id });
 }
 
+export async function listCollections(): Promise<string[]> {
+  return await invoke<string[]>("list_collections");
+}
+
+export async function createCollection(name: string): Promise<string> {
+  return await invoke<string>("create_collection", { name });
+}
+
 // Settings/Project
 export async function loadProjectSettings(): Promise<void> {
   await invoke("load_project_settings");
@@ -210,6 +218,10 @@ export async function getGitStatus(): Promise<GitStatus> {
 
 export async function getGitLog(limit: number = 10): Promise<GitCommit[]> {
   return await invoke<GitCommit[]>("get_git_log", { limit });
+}
+
+export async function getGitDiff(filePath: string): Promise<string> {
+  return await invoke<string>("get_git_diff", { filePath });
 }
 
 export async function gitCommit(message: string): Promise<string> {

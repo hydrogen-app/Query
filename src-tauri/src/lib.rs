@@ -176,6 +176,8 @@ pub fn run() {
             get_saved_queries,
             delete_saved_query,
             toggle_pin_query,
+            list_collections,
+            create_collection,
             // Settings commands
             set_project_path,
             get_current_project_path,
@@ -200,6 +202,7 @@ pub fn run() {
             check_git_repo,
             get_git_status,
             get_git_log,
+            get_git_diff,
             git_init,
             git_commit,
             git_push,

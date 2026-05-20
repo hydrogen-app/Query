@@ -235,19 +235,37 @@ export const CommandPalette = memo(function CommandPalette({
           <DialogDescription>Pick a table, then an action</DialogDescription>
         </DialogHeader>
 
-        {breadcrumbs && (
-          <div className="flex items-center gap-2 border-b px-3 py-1.5 text-xs text-muted-foreground">
-            <button
-              type="button"
-              onClick={handleBack}
-              className="flex items-center gap-1 rounded px-1 py-0.5 hover:bg-accent hover:text-accent-foreground"
-            >
-              <ArrowLeft className="h-3 w-3" />
-              Back
-            </button>
-            <span className="font-mono">{breadcrumbs}</span>
+        {/* Step indicator with breadcrumb chain, always visible */}
+        <div className="flex items-center justify-between gap-2 border-b px-3 py-1.5 text-[11px] text-muted-foreground">
+          <div className="flex items-center gap-2 min-w-0">
+            {step !== "root" && (
+              <button
+                type="button"
+                onClick={handleBack}
+                className="flex shrink-0 items-center gap-1 rounded px-1 py-0.5 hover:bg-accent hover:text-foreground"
+              >
+                <ArrowLeft className="h-3 w-3" />
+                Back
+              </button>
+            )}
+            <div className="flex items-center gap-1 truncate font-mono">
+              <span className={step === "root" ? "text-foreground" : ""}>Table</span>
+              <span className="text-muted-foreground/40">›</span>
+              <span className={step === "action" ? "text-foreground" : ""}>Action</span>
+              <span className="text-muted-foreground/40">›</span>
+              <span className={step === "columns" ? "text-foreground" : ""}>Columns</span>
+              {breadcrumbs && (
+                <span className="ml-2 truncate text-foreground/70">{breadcrumbs}</span>
+              )}
+            </div>
           </div>
-        )}
+          <span className="hidden shrink-0 text-muted-foreground/70 sm:inline">
+            <kbd className="rounded border bg-muted px-1">↵</kbd> select
+            <span className="mx-1.5">·</span>
+            <kbd className="rounded border bg-muted px-1">esc</kbd>{" "}
+            {step === "root" ? "close" : "back"}
+          </span>
+        </div>
 
         {step === "columns" && table && action ? (
           <ColumnsStep

@@ -3,13 +3,24 @@ use std::process::Command;
 use crate::utils::get_app_dir;
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct GitStatusFile {
+    pub path: String,
+    /// Two-character porcelain code, e.g. " M", "M ", "??", "A ", " D".
+    pub status: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct GitStatus {
     pub is_repo: bool,
     pub branch: String,
     pub staged: usize,
     pub unstaged: usize,
     pub untracked: usize,
+    /// Backwards-compatible flat list of paths.
     pub files: Vec<String>,
+    /// Same files but with their porcelain status codes attached so the UI
+    /// can render badges (M / A / ?? / D / etc).
+    pub entries: Vec<GitStatusFile>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -68,6 +79,7 @@ pub fn get_git_status() -> Result<GitStatus, String> {
             unstaged: 0,
             untracked: 0,
             files: vec![],
+            entries: vec![],
         });
     }
 
@@ -97,21 +109,24 @@ pub fn get_git_status() -> Result<GitStatus, String> {
     let mut unstaged = 0;
     let mut untracked = 0;
     let mut files = Vec::new();
+    let mut entries = Vec::new();
 
     for line in status_lines.lines() {
-        if line.is_empty() {
+        if line.is_empty() || line.len() < 3 {
             continue;
         }
 
         let status_code = &line[0..2];
         let filename = line[3..].to_string();
-        files.push(filename);
+        files.push(filename.clone());
+        entries.push(GitStatusFile {
+            path: filename,
+            status: status_code.to_string(),
+        });
 
         match status_code {
             "??" => untracked += 1,
             _ => {
-                // First char is staged status, second char is unstaged status
-                // Ensure we have at least 2 characters before accessing them
                 let mut chars = status_code.chars();
                 if let Some(first_char) = chars.next() {
                     if first_char != ' ' {
@@ -134,6 +149,7 @@ pub fn get_git_status() -> Result<GitStatus, String> {
         unstaged,
         untracked,
         files,
+        entries,
     })
 }
 
@@ -212,6 +228,79 @@ pub fn git_commit(message: String) -> Result<String, String> {
     }
 
     Ok("Changes committed successfully".to_string())
+}
+
+/// Returns the unified-diff patch for a single file in the project repo.
+///
+/// Tracked files use `git diff HEAD -- <path>`, which folds staged and
+/// unstaged changes into one patch. Untracked files use
+/// `git diff --no-index /dev/null <path>` so the renderer still receives a
+/// real unified-diff header (it intentionally exits non-zero on a difference,
+/// which is why we don't check `status.success()` for that branch).
+#[tauri::command]
+pub fn get_git_diff(file_path: String) -> Result<String, String> {
+    let project_path = get_app_dir().map_err(|e| e.to_string())?;
+
+    // Probe the porcelain status for this one path so we know whether it is
+    // tracked or untracked.
+    let status_output = Command::new("git")
+        .arg("status")
+        .arg("--porcelain")
+        .arg("--")
+        .arg(&file_path)
+        .current_dir(&project_path)
+        .output()
+        .map_err(|e| format!("Failed to query status: {}", e))?;
+
+    let status_line = String::from_utf8_lossy(&status_output.stdout);
+    let is_untracked = status_line
+        .lines()
+        .next()
+        .map(|line| line.starts_with("??"))
+        .unwrap_or(false);
+
+    if is_untracked {
+        // --no-index treats both sides as plain files, so it works on
+        // untracked content. It exits 1 when files differ, so we deliberately
+        // do not gate on status.success().
+        let output = Command::new("git")
+            .arg("diff")
+            .arg("--no-color")
+            .arg("--no-index")
+            .arg("--")
+            .arg("/dev/null")
+            .arg(&file_path)
+            .current_dir(&project_path)
+            .output()
+            .map_err(|e| format!("Failed to diff untracked file: {}", e))?;
+        return Ok(String::from_utf8_lossy(&output.stdout).to_string());
+    }
+
+    let output = Command::new("git")
+        .arg("diff")
+        .arg("--no-color")
+        .arg("HEAD")
+        .arg("--")
+        .arg(&file_path)
+        .current_dir(&project_path)
+        .output()
+        .map_err(|e| format!("Failed to diff file: {}", e))?;
+
+    if !output.status.success() {
+        // Likely an empty repo with no HEAD — fall back to working-tree
+        // vs. index. Still no-color for cleaner downstream parsing.
+        let fallback = Command::new("git")
+            .arg("diff")
+            .arg("--no-color")
+            .arg("--")
+            .arg(&file_path)
+            .current_dir(&project_path)
+            .output()
+            .map_err(|e| format!("Failed to diff file (fallback): {}", e))?;
+        return Ok(String::from_utf8_lossy(&fallback.stdout).to_string());
+    }
+
+    Ok(String::from_utf8_lossy(&output.stdout).to_string())
 }
 
 #[tauri::command]

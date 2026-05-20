@@ -1,4 +1,4 @@
-import { memo, useState, useEffect } from "react";
+import { memo, useState, useEffect, useMemo } from "react";
 import {
   Sidebar,
   SidebarContent,
@@ -38,9 +38,17 @@ import {
   Database,
   History as HistoryIcon,
   BookmarkIcon,
-  PinOff,
   Pin,
+  Folder,
+  FilePlus,
+  FolderPlus,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../ui/dropdown-menu";
 import { Kbd } from "../ui/kbd";
 import type {
   DatabaseSchema,
@@ -49,6 +57,7 @@ import type {
   GitStatus,
 } from "../../types";
 import { getGitStatus, gitInit } from "../../utils/tauri";
+import { getRequestCollection } from "../../utils/queryRequest";
 import { GitCommitModal } from "../modals/GitCommitModal";
 import { SIDEBAR_FOOTER_HEIGHT, GIT_STATUS_POLL_INTERVAL, MESSAGE_AUTO_CLEAR_DELAY } from "../../constants";
 
@@ -59,12 +68,16 @@ interface AppSidebarProps {
   onSchemaChange: (schema: string) => void;
   history: QueryHistoryEntry[];
   savedQueries: SavedQuery[];
+  collections: string[];
   onTableClick: (tableName: string) => void;
   onColumnClick: (tableName: string, columnName: string) => void;
   onSelectQuery: (query: string) => void;
+  onSelectSavedQuery: (query: SavedQuery) => void;
   onDeleteQuery: (id: number) => void;
   onTogglePin: (id: number) => void;
   onClearHistory: () => void;
+  onNewQuery: (collection?: string) => void;
+  onNewCollection: () => void;
   onTableInsert?: (tableName: string) => void;
   onTableUpdate?: (tableName: string) => void;
   onTableDelete?: (tableName: string) => void;
@@ -101,12 +114,16 @@ export const AppSidebar = memo(function AppSidebar({
   onSchemaChange,
   history,
   savedQueries,
+  collections,
   onTableClick,
   onColumnClick,
   onSelectQuery,
+  onSelectSavedQuery,
   onDeleteQuery,
   onTogglePin,
   onClearHistory,
+  onNewQuery,
+  onNewCollection,
   onTableInsert,
   onTableUpdate,
   onTableDelete,
@@ -155,8 +172,34 @@ export const AppSidebar = memo(function AppSidebar({
     }
   }, [gitError, gitSuccess]);
 
-  const pinnedQueries = savedQueries.filter((q) => q.is_pinned);
-  const unpinnedQueries = savedQueries.filter((q) => !q.is_pinned);
+  const savedQueryGroups = useMemo(() => {
+    const groups = new Map<string, SavedQuery[]>();
+
+    savedQueries.forEach((savedQuery) => {
+      const collection = getRequestCollection(savedQuery);
+      const entries = groups.get(collection) ?? [];
+      entries.push(savedQuery);
+      groups.set(collection, entries);
+    });
+
+    // Surface empty collections (created via "New Collection" but no queries
+    // saved yet) so users see them in the tree immediately.
+    collections.forEach((collection) => {
+      if (!groups.has(collection)) {
+        groups.set(collection, []);
+      }
+    });
+
+    return Array.from(groups.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([collection, queries]) => ({
+        collection,
+        queries: queries.sort((a, b) => {
+          if (a.is_pinned !== b.is_pinned) return a.is_pinned ? -1 : 1;
+          return a.name.localeCompare(b.name);
+        }),
+      }));
+  }, [savedQueries, collections]);
 
   return (
     <Sidebar>
@@ -286,8 +329,11 @@ export const AppSidebar = memo(function AppSidebar({
                             </Collapsible>
                           ))
                         ) : (
-                          <div className="px-4 py-2 text-xs text-muted-foreground text-center">
-                            Connect to see tables
+                          <div className="flex flex-col items-center gap-1 px-4 py-4 text-center">
+                            <Database className="h-4 w-4 text-muted-foreground/40" />
+                            <span className="text-[11px] text-muted-foreground">
+                              Connect a database to browse tables
+                            </span>
                           </div>
                         )}
                       </SidebarMenuSub>
@@ -295,106 +341,144 @@ export const AppSidebar = memo(function AppSidebar({
                   </SidebarMenuItem>
                 </Collapsible>
 
-                {/* Saved Queries Section */}
-                <Collapsible className="group/collapsible">
+                {/* Collections Section */}
+                <Collapsible className="group/collapsible" defaultOpen>
                   <SidebarMenuItem>
-                    <CollapsibleTrigger asChild>
-                      <SidebarMenuButton>
-                        <BookmarkIcon className="h-4 w-4" />
-                        <span>Saved Queries</span>
-                        <span className="ml-auto text-xs text-muted-foreground">
-                          {savedQueries.length}
-                        </span>
-                        <Plus className="ml-2 h-4 w-4 group-data-[state=open]/collapsible:hidden" />
-                        <Minus className="ml-2 h-4 w-4 group-data-[state=closed]/collapsible:hidden" />
-                      </SidebarMenuButton>
-                    </CollapsibleTrigger>
+                    <div className="flex items-center">
+                      <CollapsibleTrigger asChild className="flex-1">
+                        <SidebarMenuButton>
+                          <BookmarkIcon className="h-4 w-4" />
+                          <span>Collections</span>
+                          <span className="ml-auto text-xs text-muted-foreground">
+                            {savedQueries.length}
+                          </span>
+                          <ChevronRight className="ml-2 h-3 w-3 transition-transform group-data-[state=open]/collapsible:rotate-90" />
+                        </SidebarMenuButton>
+                      </CollapsibleTrigger>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            type="button"
+                            onClick={(e) => e.stopPropagation()}
+                            className="mr-1 flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-foreground"
+                            title="Add"
+                          >
+                            <Plus className="h-3.5 w-3.5" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-44">
+                          <DropdownMenuItem onSelect={() => onNewQuery()}>
+                            <FilePlus className="h-3.5 w-3.5" />
+                            New query
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onSelect={() => onNewCollection()}>
+                            <FolderPlus className="h-3.5 w-3.5" />
+                            New collection
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                     <CollapsibleContent>
                       <SidebarMenuSub>
-                        {savedQueries.length === 0 ? (
-                          <div className="px-4 py-2 text-xs text-muted-foreground text-center">
-                            No saved queries
+                        {savedQueryGroups.length === 0 ? (
+                          <div className="flex flex-col items-center gap-1 px-4 py-4 text-center">
+                            <BookmarkIcon className="h-4 w-4 text-muted-foreground/40" />
+                            <span className="text-[11px] text-muted-foreground">
+                              No collections yet
+                            </span>
+                            <span className="text-[10px] text-muted-foreground/70">
+                              Click <Plus className="inline h-2.5 w-2.5 align-text-bottom" /> above to add one
+                            </span>
                           </div>
                         ) : (
-                          <>
-                            {pinnedQueries.map((savedQuery) => {
-                              const tag = getQueryTag(savedQuery.query);
-                              return (
-                                <SidebarMenuSubItem key={savedQuery.id}>
-                                  <SidebarMenuSubButton
-                                    onClick={() => onSelectQuery(savedQuery.query)}
+                          savedQueryGroups.map(({ collection, queries }) => (
+                            <Collapsible
+                              key={collection}
+                              defaultOpen={collection === "General" || queries.length === 0}
+                              className="group/collection"
+                            >
+                              <SidebarMenuSubItem>
+                                <div className="group/collection-row flex items-center">
+                                  <CollapsibleTrigger asChild className="flex-1">
+                                    <SidebarMenuSubButton>
+                                      <ChevronRight className="h-3 w-3 transition-transform group-data-[state=open]/collection:rotate-90" />
+                                      <Folder className="h-3.5 w-3.5 text-muted-foreground" />
+                                      <span className="flex-1 truncate text-xs">
+                                        {collection}
+                                      </span>
+                                      <span className="text-xs text-muted-foreground">
+                                        {queries.length}
+                                      </span>
+                                    </SidebarMenuSubButton>
+                                  </CollapsibleTrigger>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      onNewQuery(collection);
+                                    }}
+                                    className="mr-1 flex h-5 w-5 items-center justify-center rounded text-muted-foreground opacity-0 transition-opacity hover:bg-accent hover:text-foreground group-hover/collection-row:opacity-100"
+                                    title={`New query in ${collection}`}
                                   >
-                                    <Kbd
-                                      className={`text-[10px] px-1.5 py-0 h-4 ${tag.className} border`}
-                                    >
-                                      {tag.label}
-                                    </Kbd>
-                                    {savedQuery.is_pinned && (
-                                      <span className="text-yellow-500 text-xs"><PinOff /></span>
+                                    <Plus className="h-3 w-3" />
+                                  </button>
+                                </div>
+                                <CollapsibleContent>
+                                  <div className="ml-4 mt-1 space-y-1">
+                                    {queries.length === 0 && (
+                                      <div className="px-2 py-1 text-[10px] text-muted-foreground">
+                                        Empty collection
+                                      </div>
                                     )}
-                                    <span className="flex-1 min-w-0 truncate text-xs">
-                                      {savedQuery.name}
-                                    </span>
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        onTogglePin(savedQuery.id);
-                                      }}
-                                      className="opacity-0 group-hover:opacity-100 text-xs"
-                                    >
-                                      <Pin />
-                                    </button>
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        onDeleteQuery(savedQuery.id);
-                                      }}
-                                      className="opacity-0 group-hover:opacity-100 text-xs hover:text-red-400"
-                                    >
-                                      ×
-                                    </button>
-                                  </SidebarMenuSubButton>
-                                </SidebarMenuSubItem>
-                              );
-                            })}
-                            {unpinnedQueries.map((savedQuery) => {
-                              const tag = getQueryTag(savedQuery.query);
-                              return (
-                                <SidebarMenuSubItem key={savedQuery.id}>
-                                  <SidebarMenuSubButton
-                                    onClick={() => onSelectQuery(savedQuery.query)}
-                                  >
-                                    <Kbd
-                                      className={`text-[10px] px-1.5 py-0 h-4 ${tag.className} border`}
-                                    >
-                                      {tag.label}
-                                    </Kbd>
-                                    <span className="flex-1 min-w-0 truncate text-xs">
-                                      {savedQuery.name}
-                                    </span>
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        onTogglePin(savedQuery.id);
-                                      }}
-                                      className="opacity-0 group-hover:opacity-100 text-xs"
-                                    >
-                                      <Pin />
-                                    </button>
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        onDeleteQuery(savedQuery.id);
-                                      }}
-                                      className="opacity-0 group-hover:opacity-100 text-xs hover:text-red-400"
-                                    >
-                                      ×
-                                    </button>
-                                  </SidebarMenuSubButton>
-                                </SidebarMenuSubItem>
-                              );
-                            })}
-                          </>
+                                    {queries.map((savedQuery) => {
+                                      const tag = getQueryTag(savedQuery.query);
+                                      return (
+                                        <SidebarMenuSubButton
+                                          key={savedQuery.id}
+                                          onClick={() => onSelectSavedQuery(savedQuery)}
+                                          className="group/query flex gap-2"
+                                        >
+                                          <Kbd
+                                            className={`text-[10px] px-1.5 py-0 h-4 ${tag.className} border`}
+                                          >
+                                            {tag.label}
+                                          </Kbd>
+                                          {savedQuery.is_pinned && (
+                                            <Pin className="h-3 w-3 shrink-0 text-yellow-500" />
+                                          )}
+                                          <span className="flex-1 min-w-0 truncate text-xs">
+                                            {savedQuery.name}
+                                          </span>
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              onTogglePin(savedQuery.id);
+                                            }}
+                                            className="opacity-0 transition-opacity group-hover/query:opacity-100"
+                                            title={
+                                              savedQuery.is_pinned ? "Unpin request" : "Pin request"
+                                            }
+                                          >
+                                            <Pin className="h-3 w-3" />
+                                          </button>
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              onDeleteQuery(savedQuery.id);
+                                            }}
+                                            className="text-xs opacity-0 transition-opacity hover:text-red-400 group-hover/query:opacity-100"
+                                            title="Delete request"
+                                          >
+                                            ×
+                                          </button>
+                                        </SidebarMenuSubButton>
+                                      );
+                                    })}
+                                  </div>
+                                </CollapsibleContent>
+                              </SidebarMenuSubItem>
+                            </Collapsible>
+                          ))
                         )}
                       </SidebarMenuSub>
                     </CollapsibleContent>
@@ -418,8 +502,14 @@ export const AppSidebar = memo(function AppSidebar({
                     <CollapsibleContent>
                       <SidebarMenuSub>
                         {history.length === 0 ? (
-                          <div className="px-4 py-2 text-xs text-muted-foreground text-center">
-                            No history yet
+                          <div className="flex flex-col items-center gap-1 px-4 py-4 text-center">
+                            <HistoryIcon className="h-4 w-4 text-muted-foreground/40" />
+                            <span className="text-[11px] text-muted-foreground">
+                              No queries yet
+                            </span>
+                            <span className="text-[10px] text-muted-foreground/70">
+                              Run something and it'll show up here
+                            </span>
                           </div>
                         ) : (
                           <>

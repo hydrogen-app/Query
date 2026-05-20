@@ -2,7 +2,6 @@
 
 // File names for data storage
 pub const HISTORY_DB_FILENAME: &str = "history.db";
-pub const SAVED_QUERIES_DB_FILENAME: &str = "saved_queries.db";
 pub const CONNECTIONS_FILENAME: &str = "connections.json";
 pub const SETTINGS_FILENAME: &str = "settings.json";
 

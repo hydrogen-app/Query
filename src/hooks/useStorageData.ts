@@ -9,6 +9,8 @@ import {
   saveQuery,
   deleteSavedQuery,
   togglePinQuery,
+  listCollections,
+  createCollection,
   saveConnectionPassword,
   getConnectionPassword,
   deleteConnectionPassword,
@@ -21,6 +23,7 @@ interface UseStorageDataReturn {
   connections: ConnectionConfig[];
   history: QueryHistoryEntry[];
   savedQueries: SavedQuery[];
+  collections: string[];
 
   // Connection operations
   loadSavedConnections: () => Promise<void>;
@@ -39,6 +42,10 @@ interface UseStorageDataReturn {
   deleteQuery: (id: number) => Promise<void>;
   togglePin: (id: number) => Promise<void>;
 
+  // Collection operations
+  loadCollections: () => Promise<void>;
+  addCollection: (name: string) => Promise<void>;
+
   // Bulk refresh
   refreshAll: () => Promise<void>;
 }
@@ -47,6 +54,7 @@ export function useStorageData(): UseStorageDataReturn {
   const [connections, setConnections] = useState<ConnectionConfig[]>([]);
   const [history, setHistory] = useState<QueryHistoryEntry[]>([]);
   const [savedQueries, setSavedQueries] = useState<SavedQuery[]>([]);
+  const [collections, setCollections] = useState<string[]>([]);
 
   // Connection operations
   const loadSavedConnections = useCallback(async () => {
@@ -120,7 +128,7 @@ export function useStorageData(): UseStorageDataReturn {
     await loadQueryHistory();
   }, [loadQueryHistory]);
 
-  // Saved queries operations
+  // Saved queries / collections operations
   const loadSavedQueries = useCallback(async () => {
     try {
       const queries = await getSavedQueries();
@@ -130,10 +138,22 @@ export function useStorageData(): UseStorageDataReturn {
     }
   }, []);
 
-  const saveNewQuery = useCallback(async (name: string, query: string, description: string | null) => {
-    await saveQuery(name, query, description);
-    await loadSavedQueries();
-  }, [loadSavedQueries]);
+  const loadCollections = useCallback(async () => {
+    try {
+      const list = await listCollections();
+      setCollections(list);
+    } catch (error) {
+      console.error("Failed to load collections:", error);
+    }
+  }, []);
+
+  const saveNewQuery = useCallback(
+    async (name: string, query: string, description: string | null) => {
+      await saveQuery(name, query, description);
+      await Promise.all([loadSavedQueries(), loadCollections()]);
+    },
+    [loadSavedQueries, loadCollections]
+  );
 
   const deleteQuery = useCallback(async (id: number) => {
     await deleteSavedQuery(id);
@@ -145,19 +165,29 @@ export function useStorageData(): UseStorageDataReturn {
     await loadSavedQueries();
   }, [loadSavedQueries]);
 
+  const addCollection = useCallback(
+    async (name: string) => {
+      await createCollection(name);
+      await loadCollections();
+    },
+    [loadCollections]
+  );
+
   // Bulk refresh
   const refreshAll = useCallback(async () => {
     await Promise.all([
       loadSavedConnections(),
       loadQueryHistory(),
       loadSavedQueries(),
+      loadCollections(),
     ]);
-  }, [loadSavedConnections, loadQueryHistory, loadSavedQueries]);
+  }, [loadSavedConnections, loadQueryHistory, loadSavedQueries, loadCollections]);
 
   return {
     connections,
     history,
     savedQueries,
+    collections,
     loadSavedConnections,
     saveConnection,
     deleteConnection,
@@ -169,6 +199,8 @@ export function useStorageData(): UseStorageDataReturn {
     saveNewQuery,
     deleteQuery,
     togglePin,
+    loadCollections,
+    addCollection,
     refreshAll,
   };
 }

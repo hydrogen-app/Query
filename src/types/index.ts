@@ -35,6 +35,7 @@ export type {
 // Git types
 export type {
   GitStatus,
+  GitStatusFile,
   GitCommit,
 } from './git';
 

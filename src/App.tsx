@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useMemo } from "react";
+import { useEffect, useCallback, useMemo, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import { getCurrentWindow } from "@tauri-apps/api/window";
@@ -19,13 +19,13 @@ import {
   SidebarTrigger,
 } from "./components/ui/sidebar";
 import { AppSidebar } from "./components/layout/AppSidebar";
+import { StatusBar } from "./components/layout/StatusBar";
 import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
 } from "./components/ui/resizable";
 import { Button } from "./components/ui/button";
-import { Badge } from "./components/ui/badge";
 import { Separator } from "./components/ui/separator";
 import {
   Select,
@@ -36,7 +36,6 @@ import {
 } from "./components/ui/select";
 import {
   Settings as SettingsIcon,
-  Download,
   Lock,
   Unlock,
   LayoutGrid,
@@ -81,13 +80,21 @@ export default function App() {
     queryExecution.query
   );
 
+  // When the user clicks the "+" on a specific collection group, we preset
+  // the save modal's collection field — otherwise the modal falls back to
+  // the workspace's current collection.
+  const [saveModalCollectionOverride, setSaveModalCollectionOverride] = useState<
+    string | null
+  >(null);
+
   const requestCollections = useMemo(() => {
     const collections = new Set(
       storage.savedQueries.map((savedQuery) => getRequestCollection(savedQuery))
     );
+    storage.collections.forEach((c) => collections.add(c));
     collections.add(requestWorkspace.collection || "General");
     return Array.from(collections).sort((a, b) => a.localeCompare(b));
-  }, [requestWorkspace.collection, storage.savedQueries]);
+  }, [requestWorkspace.collection, storage.savedQueries, storage.collections]);
 
   const queryKind = useMemo(
     () => getQueryKind(queryExecution.query),
@@ -108,6 +115,7 @@ export default function App() {
         await storage.loadSavedConnections();
         storage.loadQueryHistory().catch((err) => console.error("Failed to load query history:", err));
         storage.loadSavedQueries().catch((err) => console.error("Failed to load saved queries:", err));
+        storage.loadCollections().catch((err) => console.error("Failed to load collections:", err));
         await connection.autoConnect();
       }
     }
@@ -169,6 +177,7 @@ export default function App() {
         requestWorkspace.setCollection(input.collection || "General");
         requestWorkspace.setSafetyMode(input.safetyMode);
         connection.setStatus(`Request "${input.name}" saved successfully`);
+        setSaveModalCollectionOverride(null);
         modals.closeModal("saveModal");
       } catch (error) {
         connection.setStatus(`Failed to save request: ${error}`);
@@ -176,6 +185,68 @@ export default function App() {
     },
     [connection, modals, queryExecution.query, requestWorkspace, storage]
   );
+
+  const handleNewQuery = useCallback(
+    (collection?: string) => {
+      setSaveModalCollectionOverride(collection ?? null);
+      modals.openModal("saveModal");
+    },
+    [modals]
+  );
+
+  // True when the workspace has a real, user-chosen name (not the default
+  // placeholder and not empty). Used to skip the Save modal on Cmd+S.
+  const hasNamedRequest = useMemo(() => {
+    const name = requestWorkspace.requestName.trim();
+    return name !== "" && name !== "Untitled request";
+  }, [requestWorkspace.requestName]);
+
+  // Direct save without opening the modal — reuses every field the modal
+  // would have collected from the current workspace state.
+  const saveCurrentRequest = useCallback(async () => {
+    try {
+      const name = requestWorkspace.requestName.trim();
+      if (!name) {
+        modals.openModal("saveModal");
+        return;
+      }
+      const params = Object.fromEntries(
+        requestWorkspace.params.map((param) => [param.name, param.value])
+      );
+      const description = encodeRequestDescription(null, {
+        collection: requestWorkspace.collection || "General",
+        environmentId: requestWorkspace.activeEnvironmentId,
+        safetyMode: requestWorkspace.safetyMode,
+        maxRows: requestWorkspace.maxRows,
+        connectionName: connection.config.name || null,
+        params,
+      });
+      await storage.saveNewQuery(name, queryExecution.query, description);
+      connection.setStatus(`Saved "${name}"`);
+    } catch (error) {
+      connection.setStatus(`Failed to save: ${error}`);
+    }
+  }, [connection, modals, queryExecution.query, requestWorkspace, storage]);
+
+  // Cmd+S entry point. Direct-saves a named request, prompts otherwise.
+  const handleSaveShortcut = useCallback(() => {
+    if (hasNamedRequest) {
+      saveCurrentRequest();
+    } else {
+      modals.openModal("saveModal");
+    }
+  }, [hasNamedRequest, modals, saveCurrentRequest]);
+
+  const handleNewCollection = useCallback(async () => {
+    const name = window.prompt("New collection name?");
+    if (!name) return;
+    try {
+      await storage.addCollection(name);
+      connection.setStatus(`Collection "${name}" created`);
+    } catch (error) {
+      connection.setStatus(`Failed to create collection: ${error}`);
+    }
+  }, [storage, connection]);
 
   const handleDeleteSavedQuery = useCallback(
     async (id: number) => {
@@ -337,10 +408,10 @@ export default function App() {
         e.preventDefault();
         runQuery();
       }
-      // Cmd+S: Save query
+      // Cmd+S: Save query (direct-save if named, otherwise prompt)
       if ((e.metaKey || e.ctrlKey) && e.key === "s") {
         e.preventDefault();
-        modals.openModal("saveModal");
+        handleSaveShortcut();
       }
       // Cmd+N: New connection
       if ((e.metaKey || e.ctrlKey) && e.key === "n") {
@@ -359,7 +430,7 @@ export default function App() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [modals, layout, runQuery]);
+  }, [modals, layout, runQuery, handleSaveShortcut]);
 
   // Listen for menu events from macOS menubar
   useEffect(() => {
@@ -372,7 +443,7 @@ export default function App() {
         modals.setEditingConnection(null);
         modals.openModal("connectionModal");
       }),
-      listen("menu-save-query", () => modals.openModal("saveModal")),
+      listen("menu-save-query", () => handleSaveShortcut()),
       listen("menu-command-palette", () => modals.toggleModal("commandPalette")),
       listen("menu-toggle-sidebar", () => {
         window.dispatchEvent(
@@ -393,7 +464,7 @@ export default function App() {
     return () => {
       listeners.forEach((unlisten) => unlisten.then((fn) => fn()));
     };
-  }, [project.currentProjectPath, modals, layout, runQuery]);
+  }, [project.currentProjectPath, modals, layout, runQuery, handleSaveShortcut]);
 
   const handleProjectPathChanged = useCallback(async () => {
     await project.loadCurrentProjectPath();
@@ -507,30 +578,18 @@ export default function App() {
             <Select value={connection.config.name} onValueChange={handleConnectionChange}>
               <SelectTrigger className="h-7 border-none shadow-none text-sm font-medium hover:bg-accent transition-colors">
                 <div className="flex items-center gap-2">
-                  <span className="relative flex h-2 w-2">
-                    {connection.connected && (
-                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-status-success opacity-75" />
-                    )}
-                    <span className={`relative inline-flex h-2 w-2 rounded-full ${
+                  <span
+                    className={`inline-flex h-2 w-2 rounded-full ${
                       connection.connected ? "bg-status-success" : "bg-muted-foreground/50"
-                    }`} />
-                  </span>
+                    }`}
+                  />
                   <SelectValue placeholder="No connection" />
                 </div>
               </SelectTrigger>
               <SelectContent>
                 {storage.connections.map((conn) => (
                   <SelectItem key={conn.name} value={conn.name}>
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={`h-2 w-2 rounded-full ${
-                          conn.name === connection.config.name && connection.connected
-                            ? "bg-status-success"
-                            : "bg-muted-foreground/50"
-                        }`}
-                      />
-                      {conn.name}
-                    </div>
+                    {conn.name}
                   </SelectItem>
                 ))}
                 <SelectItem value="__new__">
@@ -695,6 +754,7 @@ export default function App() {
             onSchemaChange={connection.switchSchema}
             history={storage.history}
             savedQueries={storage.savedQueries}
+            collections={storage.collections}
             onTableClick={queryExecution.handleTableClick}
             onColumnClick={queryExecution.handleColumnClick}
             onSelectQuery={queryExecution.setQuery}
@@ -702,6 +762,8 @@ export default function App() {
             onDeleteQuery={handleDeleteSavedQuery}
             onTogglePin={handleTogglePin}
             onClearHistory={handleClearHistory}
+            onNewQuery={handleNewQuery}
+            onNewCollection={handleNewCollection}
             onTableInsert={queryExecution.handleTableInsert}
             onTableUpdate={queryExecution.handleTableUpdate}
             onTableDelete={queryExecution.handleTableDelete}
@@ -735,7 +797,7 @@ export default function App() {
                         onSafetyModeChange={requestWorkspace.setSafetyMode}
                         onMaxRowsChange={requestWorkspace.setMaxRows}
                         onVimModeChange={layout.setVimMode}
-                        onSave={() => modals.openModal("saveModal")}
+                        onSave={handleSaveShortcut}
                         onRun={runQuery}
                       />
                       <div className="flex-1">
@@ -752,12 +814,12 @@ export default function App() {
                           onToggleCommandPalette={() => modals.toggleModal("commandPalette")}
                         />
                       </div>
-                      {connection.status && (
-                        <div className="border-t border-border/50 bg-muted/20 px-4 py-1.5 text-xs text-muted-foreground flex items-center gap-2">
-                          <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
-                          {connection.status}
-                        </div>
-                      )}
+                      <StatusBar
+                        status={connection.status}
+                        onClear={() => connection.setStatus("")}
+                        connected={connection.connected}
+                        connectionName={connection.config.name}
+                      />
                     </div>
                   </ResizablePanel>
 
@@ -768,69 +830,84 @@ export default function App() {
               {/* Results Panel */}
               <ResizablePanel defaultSize={layout.fullScreenResults ? 100 : UI_LAYOUT.DEFAULT_PANEL_SIZE} minSize={UI_LAYOUT.MIN_PANEL_SIZE}>
                 <div className="flex h-full flex-col min-h-0">
-                  <div className="flex items-center justify-between border-b border-border/50 bg-muted/30 px-4 py-2">
-                    <div className="flex min-w-0 items-center gap-2">
-                      <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{modals.modals.erd ? "ERD" : "Results"}</h3>
+                  <div className="flex h-10 items-center justify-between gap-3 border-b border-border/50 bg-muted/30 px-4">
+                    <div className="flex min-w-0 items-center gap-2.5">
+                      <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        {modals.modals.erd ? "ERD" : "Results"}
+                      </h3>
                       {queryExecution.lastExecution && !modals.modals.erd && (
-                        <div className="flex min-w-0 items-center gap-2 text-xs text-muted-foreground">
-                          <Badge
-                            variant={
+                        <>
+                          <span
+                            className={`inline-flex h-1.5 w-1.5 shrink-0 rounded-full ${
                               queryExecution.lastExecution.status === "success"
-                                ? "outline"
-                                : "destructive"
-                            }
-                            className="h-5 rounded-md px-1.5"
-                          >
-                            {queryExecution.lastExecution.status === "success" ? "OK" : "ERR"}
-                          </Badge>
-                          <span className="truncate">
+                                ? "bg-emerald-500"
+                                : "bg-rose-500"
+                            }`}
+                          />
+                          {queryExecution.result && (
+                            <div className="flex items-center gap-3 text-xs">
+                              <span className="font-mono font-medium">
+                                {queryExecution.result.row_count.toLocaleString()}
+                                <span className="ml-1 text-muted-foreground">
+                                  row{queryExecution.result.row_count === 1 ? "" : "s"}
+                                </span>
+                              </span>
+                              <span className="font-mono text-muted-foreground">
+                                {queryExecution.result.execution_time_ms}ms
+                              </span>
+                            </div>
+                          )}
+                          <span className="truncate text-xs text-muted-foreground">
                             {queryExecution.lastExecution.connectionName}
                             {queryExecution.lastExecution.environmentName
                               ? ` / ${queryExecution.lastExecution.environmentName}`
                               : ""}
                           </span>
-                        </div>
+                        </>
                       )}
                     </div>
                     {queryExecution.result && !modals.modals.erd && (
-                      <div className="flex items-center gap-2">
+                      <div className="flex shrink-0 items-center gap-1">
                         <Button
-                          variant={layout.fullScreenResults ? "default" : "outline"}
-                          size="sm"
-                          onClick={layout.toggleFullScreenResults}
-                          title="Toggle full-screen results (Cmd+Shift+F)"
-                        >
-                          {layout.fullScreenResults ? (
-                            <Minimize className="h-3 w-3" />
-                          ) : (
-                            <Maximize className="h-3 w-3" />
-                          )}
-                        </Button>
-                        <Button
-                          variant={layout.compactView ? "default" : "outline"}
+                          variant="ghost"
                           size="sm"
                           onClick={() => layout.setCompactView(!layout.compactView)}
                           title="Toggle compact view"
+                          className={`h-7 text-xs ${layout.compactView ? "text-foreground" : "text-muted-foreground"}`}
                         >
-                          <span className="text-xs">Compact</span>
+                          Compact
                         </Button>
                         <Button
                           variant="ghost"
-                          size="sm"
+                          size="icon"
                           onClick={queryExecution.exportToCSV}
                           title="Export as CSV"
+                          className="h-7 w-7 text-muted-foreground hover:text-foreground"
                         >
-                          <Download className="h-3 w-3 mr-1" />
-                          CSV
+                          <span className="text-[10px] font-medium">CSV</span>
                         </Button>
                         <Button
                           variant="ghost"
-                          size="sm"
+                          size="icon"
                           onClick={queryExecution.exportToJSON}
                           title="Export as JSON"
+                          className="h-7 w-7 text-muted-foreground hover:text-foreground"
                         >
-                          <Download className="h-3 w-3 mr-1" />
-                          JSON
+                          <span className="text-[10px] font-medium">JSON</span>
+                        </Button>
+                        <div className="mx-1 h-4 w-px bg-border" />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={layout.toggleFullScreenResults}
+                          title="Toggle full-screen results (⌘⇧F)"
+                          className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                        >
+                          {layout.fullScreenResults ? (
+                            <Minimize className="h-3.5 w-3.5" />
+                          ) : (
+                            <Maximize className="h-3.5 w-3.5" />
+                          )}
                         </Button>
                       </div>
                     )}
@@ -859,11 +936,14 @@ export default function App() {
       {/* Modals */}
       <SaveQueryModal
         isOpen={modals.modals.saveModal}
-        onClose={() => modals.closeModal("saveModal")}
+        onClose={() => {
+          modals.closeModal("saveModal");
+          setSaveModalCollectionOverride(null);
+        }}
         onSave={handleSaveQuery}
         currentQuery={queryExecution.query}
         initialName={requestWorkspace.requestName}
-        initialCollection={requestWorkspace.collection}
+        initialCollection={saveModalCollectionOverride ?? requestWorkspace.collection}
         initialSafetyMode={requestWorkspace.safetyMode}
         collections={requestCollections}
       />
