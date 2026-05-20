@@ -3,6 +3,7 @@
 A modern, fast PostgreSQL client built with Tauri 2.0, React 19, and TypeScript.
 
 ### Priority Features
+- [ ] when opening the app and it is supposed to be in vim mode, it says it is in vim mode but it seems to not be.
 - [ ] glitch when opening the app: the connections are not loaded, but the directory loads. but i need to re-select the directory for the connections to populate.
 - [ ] remove all the damn use states. need to refactor the AppNew file.
 - [ ] better styling: 

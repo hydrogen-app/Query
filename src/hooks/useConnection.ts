@@ -27,6 +27,7 @@ interface UseConnectionReturn {
 
   // Operations
   connect: (connection: ConnectionConfig) => Promise<boolean>;
+  reconnect: (connections?: ConnectionConfig[]) => Promise<ConnectionConfig | null>;
   disconnect: () => void;
   switchConnection: (connectionName: string, connections: ConnectionConfig[]) => Promise<void>;
   switchSchema: (schemaName: string) => Promise<void>;
@@ -76,6 +77,58 @@ export function useConnection(): UseConnectionReturn {
     }
   }, []);
 
+  const connectSavedConnection = useCallback(async (
+    connection: ConnectionConfig
+  ): Promise<boolean> => {
+    const password = await getConnectionPassword(connection.name);
+    const connWithPassword = { ...connection, password: password || connection.password || "" };
+    const success = await connect(connWithPassword);
+
+    if (success) {
+      await setLastConnection(connection.name);
+    }
+
+    return success;
+  }, [connect]);
+
+  const reconnect = useCallback(async (
+    connections: ConnectionConfig[] = []
+  ): Promise<ConnectionConfig | null> => {
+    try {
+      const savedConnections = connections.length > 0 ? connections : await loadConnections();
+      const lastConnectionName = await getLastConnection();
+      const currentConnection = savedConnections.find((conn) => conn.name === config.name);
+      const lastConnection = lastConnectionName
+        ? savedConnections.find((conn) => conn.name === lastConnectionName)
+        : null;
+      const singleConnection = savedConnections.length === 1 ? savedConnections[0] : null;
+      const configuredConnection =
+        config.name &&
+        config.host &&
+        config.database &&
+        config.username &&
+        config.name !== DEFAULT_CONNECTION.name
+          ? config
+          : null;
+      const target =
+        currentConnection || lastConnection || configuredConnection || singleConnection;
+
+      if (!target) {
+        setStatus("No saved connection to reconnect");
+        return null;
+      }
+
+      const success = await connectSavedConnection(target);
+      return success ? target : null;
+    } catch (error) {
+      setStatus(`Reconnect failed: ${error}`);
+      setConnected(false);
+      connectedRef.current = false;
+      setSchema(null);
+      return null;
+    }
+  }, [config, connectSavedConnection]);
+
   const disconnect = useCallback(() => {
     setConnected(false);
     connectedRef.current = false;
@@ -91,15 +144,8 @@ export function useConnection(): UseConnectionReturn {
     const conn = connections.find((c) => c.name === connectionName);
     if (!conn) return;
 
-    // Fetch password from keychain
-    const password = await getConnectionPassword(conn.name);
-    const connWithPassword = { ...conn, password: password || "" };
-
-    const success = await connect(connWithPassword);
-    if (success) {
-      await setLastConnection(conn.name);
-    }
-  }, [connect]);
+    await connectSavedConnection(conn);
+  }, [connectSavedConnection]);
 
   const switchSchema = useCallback(async (schemaName: string) => {
     if (!connected || !config) return;
@@ -121,20 +167,24 @@ export function useConnection(): UseConnectionReturn {
   const autoConnect = useCallback(async () => {
     try {
       const autoConnectEnabled = await getAutoConnectEnabled();
+      if (!autoConnectEnabled) return;
+
       const lastConnectionName = await getLastConnection();
-
-      if (!autoConnectEnabled || !lastConnectionName) return;
-
       const savedConns = await loadConnections();
-      const lastConn = savedConns.find((c) => c.name === lastConnectionName);
+      const lastConn = lastConnectionName
+        ? savedConns.find((c) => c.name === lastConnectionName)
+        : null;
+      const targetConn = lastConn || (savedConns.length === 1 ? savedConns[0] : null);
 
-      if (!lastConn) {
-        console.warn("Connection not found:", lastConnectionName);
+      if (!targetConn) {
+        if (lastConnectionName) {
+          console.warn("Connection not found:", lastConnectionName);
+        }
         return;
       }
 
-      const password = await getConnectionPassword(lastConnectionName);
-      const connWithPassword = { ...lastConn, password: password || "" };
+      const password = await getConnectionPassword(targetConn.name);
+      const connWithPassword = { ...targetConn, password: password || "" };
 
       setLoading(true);
       try {
@@ -143,6 +193,7 @@ export function useConnection(): UseConnectionReturn {
         setConnected(true);
         connectedRef.current = true;
         setConfig(connWithPassword);
+        await setLastConnection(targetConn.name);
 
         const schemas = await getDatabaseSchemas(connWithPassword);
         setAvailableSchemas(schemas);
@@ -180,6 +231,7 @@ export function useConnection(): UseConnectionReturn {
     status,
     setStatus,
     connect,
+    reconnect,
     disconnect,
     switchConnection,
     switchSchema,

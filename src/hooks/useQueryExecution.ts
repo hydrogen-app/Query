@@ -3,6 +3,20 @@ import { executeQuery } from "../utils/tauri";
 import { DEFAULTS, READ_ONLY_COMMANDS, ERROR_MESSAGES } from "../constants";
 import type { ConnectionConfig, QueryResult } from "../types";
 
+export interface QueryExecutionEvent {
+  status: "success" | "error";
+  message: string;
+  query: string;
+  startedAt: string;
+  connectionName: string;
+  environmentName?: string;
+}
+
+interface QueryExecutionOptions {
+  queryOverride?: string;
+  environmentName?: string;
+}
+
 interface UseQueryExecutionReturn {
   // State
   query: string;
@@ -10,6 +24,7 @@ interface UseQueryExecutionReturn {
   result: QueryResult | null;
   setResult: (result: QueryResult | null) => void;
   loading: boolean;
+  lastExecution: QueryExecutionEvent | null;
 
   // Editor callbacks
   insertAtCursor: ((text: string) => void) | null;
@@ -22,7 +37,8 @@ interface UseQueryExecutionReturn {
     config: ConnectionConfig,
     connectedRef: React.MutableRefObject<boolean>,
     readOnlyMode: boolean,
-    onSuccess?: (result: QueryResult) => void
+    onSuccess?: (result: QueryResult, executedQuery: string) => void | Promise<void>,
+    options?: QueryExecutionOptions
   ) => Promise<{ success: boolean; status: string }>;
 
   exportToCSV: () => void;
@@ -40,6 +56,7 @@ export function useQueryExecution(): UseQueryExecutionReturn {
   const [query, setQuery] = useState(`SELECT * FROM users LIMIT ${DEFAULTS.QUERY_LIMIT};`);
   const [result, setResult] = useState<QueryResult | null>(null);
   const [loading, setLoading] = useState(false);
+  const [lastExecution, setLastExecution] = useState<QueryExecutionEvent | null>(null);
   const [insertAtCursor, setInsertAtCursor] = useState<((text: string) => void) | null>(null);
   const [insertSnippet, setInsertSnippet] = useState<((snippet: string) => void) | null>(null);
 
@@ -47,39 +64,63 @@ export function useQueryExecution(): UseQueryExecutionReturn {
     config: ConnectionConfig,
     connectedRef: React.MutableRefObject<boolean>,
     readOnlyMode: boolean,
-    onSuccess?: (result: QueryResult) => void
+    onSuccess?: (result: QueryResult, executedQuery: string) => void | Promise<void>,
+    options?: QueryExecutionOptions
   ): Promise<{ success: boolean; status: string }> => {
+    const targetQuery = options?.queryOverride ?? query;
+    const startedAt = new Date().toISOString();
+
+    const fail = (status: string) => {
+      setLastExecution({
+        status: "error",
+        message: status,
+        query: targetQuery,
+        startedAt,
+        connectionName: config.name,
+        environmentName: options?.environmentName,
+      });
+      return { success: false, status };
+    };
+
     if (!connectedRef.current) {
-      return { success: false, status: "Please connect to a database first" };
+      return fail("Please connect to a database first");
     }
 
-    if (!query.trim()) {
-      return { success: false, status: "Please enter a query" };
+    if (!targetQuery.trim()) {
+      return fail("Please enter a query");
     }
 
     // Read-only mode validation
     if (readOnlyMode) {
-      const trimmedQuery = query.trim().toUpperCase();
+      const trimmedQuery = targetQuery.trim().toUpperCase();
       const isAllowed = READ_ONLY_COMMANDS.some((cmd) => trimmedQuery.startsWith(cmd));
 
       if (!isAllowed) {
-        return { success: false, status: ERROR_MESSAGES.READ_ONLY_MODE };
+        return fail(ERROR_MESSAGES.READ_ONLY_MODE);
       }
     }
 
     setLoading(true);
 
     try {
-      const queryResult = await executeQuery(config, query);
+      const queryResult = await executeQuery(config, targetQuery);
       setResult(queryResult);
 
       if (onSuccess) {
-        onSuccess(queryResult);
+        await onSuccess(queryResult, targetQuery);
       }
 
+      setLastExecution({
+        status: "success",
+        message: "Query executed successfully",
+        query: targetQuery,
+        startedAt,
+        connectionName: config.name,
+        environmentName: options?.environmentName,
+      });
       return { success: true, status: "Query executed successfully" };
     } catch (error) {
-      return { success: false, status: `Error executing query: ${error}` };
+      return fail(`Error executing query: ${error}`);
     } finally {
       setLoading(false);
     }
@@ -175,6 +216,7 @@ export function useQueryExecution(): UseQueryExecutionReturn {
     result,
     setResult,
     loading,
+    lastExecution,
     insertAtCursor,
     setInsertAtCursor: (fn) => setInsertAtCursor(() => fn),
     insertSnippet,
