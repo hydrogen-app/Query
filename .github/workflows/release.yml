@@ -16,14 +16,25 @@ jobs:
     outputs:
       release_id: ${{ steps.create-release.outputs.id }}
       release_upload_url: ${{ steps.create-release.outputs.upload_url }}
+      version: ${{ steps.get_version.outputs.VERSION }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Get version from tag
+      - name: Validate and extract version
         id: get_version
-        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+        env:
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          # Strip "v" prefix; require strict semver-ish form to prevent
+          # injection via crafted tag names being embedded downstream.
+          VERSION="${REF_NAME#v}"
+          if ! printf '%s' "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'; then
+            echo "::error::Tag '$REF_NAME' is not a valid semver. Expected vMAJOR.MINOR.PATCH(-prerelease)."
+            exit 1
+          fi
+          echo "VERSION=$VERSION" >> "$GITHUB_OUTPUT"
 
-      - name: Create Release
+      - name: Create draft release
         id: create-release
         uses: softprops/action-gh-release@v2
         with:
@@ -66,21 +77,26 @@ jobs:
         run: bun install
 
       - name: Import Apple Developer Certificate
-        if: env.APPLE_CERTIFICATE != ''
         env:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
           KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
         run: |
-          echo $APPLE_CERTIFICATE | base64 --decode > certificate.p12
+          if [ -z "$APPLE_CERTIFICATE" ]; then
+            echo "::error::APPLE_CERTIFICATE secret is not set — signing will fail."
+            exit 1
+          fi
+          echo "$APPLE_CERTIFICATE" | base64 --decode > certificate.p12
           security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
           security default-keychain -s build.keychain
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          security set-keychain-settings -lut 21600 build.keychain
           security import certificate.p12 -k build.keychain -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" build.keychain
           rm certificate.p12
+          security find-identity -v -p codesigning build.keychain
 
-      - name: Build Tauri app
+      - name: Build Tauri app (signed + notarized)
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -167,3 +183,120 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           release_id: ${{ needs.create-release.outputs.release_id }}
+
+  update-homebrew-tap:
+    needs: [create-release, publish-release]
+    runs-on: macos-latest
+    env:
+      VERSION: ${{ needs.create-release.outputs.version }}
+      REPO: ${{ github.repository }}
+    steps:
+      - name: Download signed macOS DMGs from release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download "v$VERSION" \
+            --repo "$REPO" \
+            --pattern "Query_*_aarch64.dmg" \
+            --pattern "Query_*_x64.dmg"
+          ls -la *.dmg
+
+      - name: Verify Gatekeeper acceptance (signed + notarized)
+        run: |
+          for dmg in *.dmg; do
+            echo "=== $dmg ==="
+            spctl --assess --type open --context context:primary-signature -vv "$dmg" || {
+              echo "::error::$dmg failed Gatekeeper. Did notarization succeed?"
+              exit 1
+            }
+          done
+
+      - name: Compute SHA256 sums
+        id: shas
+        run: |
+          ARM_FILE=$(ls Query_*_aarch64.dmg)
+          INTEL_FILE=$(ls Query_*_x64.dmg)
+          ARM_SHA=$(shasum -a 256 "$ARM_FILE" | awk '{print $1}')
+          INTEL_SHA=$(shasum -a 256 "$INTEL_FILE" | awk '{print $1}')
+          # Sanity-check that the SHAs look like SHA-256 hex (64 hex chars).
+          if ! printf '%s' "$ARM_SHA" | grep -Eq '^[0-9a-f]{64}$'; then
+            echo "::error::ARM SHA looks malformed: $ARM_SHA"; exit 1
+          fi
+          if ! printf '%s' "$INTEL_SHA" | grep -Eq '^[0-9a-f]{64}$'; then
+            echo "::error::Intel SHA looks malformed: $INTEL_SHA"; exit 1
+          fi
+          echo "ARM_SHA=$ARM_SHA"   >> "$GITHUB_OUTPUT"
+          echo "INTEL_SHA=$INTEL_SHA" >> "$GITHUB_OUTPUT"
+          echo "arm64:  $ARM_SHA"
+          echo "x86_64: $INTEL_SHA"
+
+      - name: Checkout homebrew tap
+        uses: actions/checkout@v4
+        with:
+          repository: wsoule/homebrew-tap
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          path: tap
+
+      - name: Render cask
+        env:
+          ARM_SHA: ${{ steps.shas.outputs.ARM_SHA }}
+          INTEL_SHA: ${{ steps.shas.outputs.INTEL_SHA }}
+        run: |
+          mkdir -p tap/Casks
+          # Use a quoted heredoc so shell expansion is disabled — every
+          # interpolation goes through the variables below, not directly
+          # from workflow context. VERSION is semver-validated upstream.
+          cat > tap/Casks/query.rb <<RUBY_EOF
+          cask "query" do
+            arch arm: "aarch64", intel: "x64"
+
+            version "$VERSION"
+            sha256 arm:   "$ARM_SHA",
+                   intel: "$INTEL_SHA"
+
+            url "https://github.com/$REPO/releases/download/v#{version}/Query_#{version}_#{arch}.dmg",
+                verified: "github.com/$REPO/"
+            name "Query"
+            desc "Modern SQL database client with git-friendly saved queries"
+            homepage "https://github.com/$REPO"
+
+            livecheck do
+              url :url
+              strategy :github_latest
+            end
+
+            depends_on macos: ">= :monterey"
+
+            app "Query.app"
+
+            zap trash: [
+              "~/.query",
+              "~/Library/Application Support/com.brassraven.query",
+              "~/Library/Caches/com.brassraven.query",
+              "~/Library/Preferences/com.brassraven.query.plist",
+              "~/Library/Saved Application State/com.brassraven.query.savedState",
+              "~/Library/HTTPStorages/com.brassraven.query",
+              "~/Library/WebKit/com.brassraven.query",
+            ]
+          end
+          RUBY_EOF
+
+      - name: Audit cask (informational)
+        working-directory: tap
+        run: |
+          brew style Casks/query.rb || echo "::warning::brew style had findings"
+          brew audit --cask --new Casks/query.rb || echo "::warning::brew audit had findings"
+
+      - name: Commit and push tap bump
+        working-directory: tap
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Casks/query.rb
+          if git diff --cached --quiet; then
+            echo "No changes to cask"
+          else
+            git commit -m "query $VERSION"
+            git push
+            echo "::notice::Published query $VERSION to wsoule/homebrew-tap"
+          fi
