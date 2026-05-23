@@ -21,11 +21,13 @@
 }
 
 html {
+  overflow-x: hidden;
   scroll-behavior: smooth;
 }
 
 body {
   margin: 0;
+  overflow-x: hidden;
   background: var(--bg);
   color: var(--ink);
 }
@@ -88,7 +90,6 @@ footer a:hover {
   color: var(--ink);
 }
 
-.hero,
 .install-section,
 .features-section,
 footer {
@@ -97,16 +98,46 @@ footer {
 }
 
 .hero {
-  display: grid;
-  grid-template-columns: minmax(0, 0.86fr) minmax(360px, 1.14fr);
+  position: relative;
+  isolation: isolate;
+  display: flex;
   align-items: center;
-  gap: 44px;
-  min-height: calc(100svh - 68px);
-  padding: 64px 0;
+  width: 100%;
+  min-height: clamp(560px, calc(100svh - 120px), 760px);
+  margin: 0;
+  overflow: hidden;
+  padding: 72px max(24px, calc((100vw - 1180px) / 2)) 88px;
+}
+
+.hero::before,
+.hero::after {
+  position: absolute;
+  content: "";
+}
+
+.hero::before {
+  inset: -24px;
+  z-index: -2;
+  background-image: url("./assets/query-screenshot.png");
+  background-position: center top;
+  background-size: cover;
+  filter: blur(2px);
+  opacity: 0.46;
+  transform: scale(1.04);
+}
+
+.hero::after {
+  inset: 0;
+  z-index: -1;
+  background:
+    linear-gradient(90deg, rgba(9, 9, 11, 0.96), rgba(9, 9, 11, 0.78) 48%, rgba(9, 9, 11, 0.4)),
+    linear-gradient(180deg, rgba(9, 9, 11, 0.72), rgba(9, 9, 11, 0.62) 52%, rgba(9, 9, 11, 0.95));
 }
 
 .hero-copy {
+  position: relative;
   min-width: 0;
+  max-width: 650px;
 }
 
 .eyebrow {
@@ -248,24 +279,6 @@ code {
   color: #04130a;
 }
 
-.screenshot-slot {
-  justify-self: end;
-  min-width: 0;
-  width: min(100%, 540px);
-  margin: 0;
-}
-
-.screenshot-image {
-  display: block;
-  width: 100%;
-  height: auto;
-  aspect-ratio: 1400 / 844;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--surface);
-  box-shadow: 0 24px 72px rgba(0, 0, 0, 0.34);
-}
-
 .install-section,
 .features-section {
   padding: 84px 0;
@@ -353,14 +366,7 @@ footer a {
   }
 
   .hero {
-    grid-template-columns: 1fr;
-    gap: 34px;
-    min-height: auto;
-  }
-
-  .screenshot-slot {
-    justify-self: center;
-    width: min(100%, 620px);
+    min-height: clamp(520px, calc(100svh - 96px), 700px);
   }
 
   .install-grid,
@@ -368,9 +374,6 @@ footer a {
     grid-template-columns: 1fr;
   }
 
-  .screenshot-image {
-    border-radius: 10px;
-  }
 }
 
 @media (max-width: 620px) {
@@ -386,7 +389,6 @@ footer a {
     display: none;
   }
 
-  .hero,
   .install-section,
   .features-section,
   footer {
@@ -394,7 +396,19 @@ footer a {
   }
 
   .hero {
-    padding: 54px 0;
+    padding: 54px 16px 72px;
+  }
+
+  .hero::before {
+    background-position: 58% top;
+    filter: blur(3px);
+    opacity: 0.38;
+  }
+
+  .hero::after {
+    background:
+      linear-gradient(90deg, rgba(9, 9, 11, 0.97), rgba(9, 9, 11, 0.78)),
+      linear-gradient(180deg, rgba(9, 9, 11, 0.7), rgba(9, 9, 11, 0.95));
   }
 
   .hero-actions,
