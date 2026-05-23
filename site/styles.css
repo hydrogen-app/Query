@@ -249,26 +249,19 @@ code {
 }
 
 .screenshot-slot {
+  min-width: 0;
   margin: 0;
 }
 
-.screenshot-placeholder {
-  display: grid;
-  place-items: center;
-  aspect-ratio: 16 / 10;
-  min-height: 360px;
+.screenshot-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 3540 / 2134;
   border: 1px solid var(--line);
   border-radius: 12px;
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.06), transparent 40%),
-    var(--surface);
-}
-
-.screenshot-placeholder span {
-  color: var(--muted);
-  font-size: clamp(2rem, 6vw, 5rem);
-  font-weight: 900;
-  text-transform: uppercase;
+  background: var(--surface);
+  box-shadow: 0 24px 72px rgba(0, 0, 0, 0.34);
 }
 
 .install-section,
@@ -368,8 +361,8 @@ footer a {
     grid-template-columns: 1fr;
   }
 
-  .screenshot-placeholder {
-    min-height: 260px;
+  .screenshot-image {
+    border-radius: 10px;
   }
 }
 
