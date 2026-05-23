@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, type MutableRefObject } from "react";
 import { executeQuery } from "../utils/tauri";
 import { DEFAULTS, READ_ONLY_COMMANDS, ERROR_MESSAGES } from "../constants";
 import type { ConnectionConfig, QueryResult } from "../types";
@@ -21,10 +21,14 @@ interface UseQueryExecutionReturn {
   // State
   query: string;
   setQuery: (query: string) => void;
+  setQueryDraft: (query: string) => void;
+  commitQuery: (query?: string) => void;
+  getCurrentQuery: () => string;
   result: QueryResult | null;
   setResult: (result: QueryResult | null) => void;
   loading: boolean;
   lastExecution: QueryExecutionEvent | null;
+  lastResultQuery: string | null;
 
   // Editor callbacks
   insertAtCursor: ((text: string) => void) | null;
@@ -35,7 +39,7 @@ interface UseQueryExecutionReturn {
   // Operations
   runQuery: (
     config: ConnectionConfig,
-    connectedRef: React.MutableRefObject<boolean>,
+    connectedRef: MutableRefObject<boolean>,
     readOnlyMode: boolean,
     onSuccess?: (result: QueryResult, executedQuery: string) => void | Promise<void>,
     options?: QueryExecutionOptions
@@ -53,21 +57,47 @@ interface UseQueryExecutionReturn {
 }
 
 export function useQueryExecution(): UseQueryExecutionReturn {
-  const [query, setQuery] = useState(`SELECT * FROM users LIMIT ${DEFAULTS.QUERY_LIMIT};`);
-  const [result, setResult] = useState<QueryResult | null>(null);
+  const initialQuery = `SELECT * FROM users LIMIT ${DEFAULTS.QUERY_LIMIT};`;
+  const [query, setQueryState] = useState(initialQuery);
+  const queryRef = useRef(initialQuery);
+  const [result, setResultState] = useState<QueryResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [lastExecution, setLastExecution] = useState<QueryExecutionEvent | null>(null);
+  const [lastResultQuery, setLastResultQuery] = useState<string | null>(null);
   const [insertAtCursor, setInsertAtCursor] = useState<((text: string) => void) | null>(null);
   const [insertSnippet, setInsertSnippet] = useState<((snippet: string) => void) | null>(null);
 
+  const setQuery = useCallback((nextQuery: string) => {
+    queryRef.current = nextQuery;
+    setQueryState((current) => (current === nextQuery ? current : nextQuery));
+  }, []);
+
+  const setQueryDraft = useCallback((nextQuery: string) => {
+    queryRef.current = nextQuery;
+  }, []);
+
+  const commitQuery = useCallback((nextQuery = queryRef.current) => {
+    queryRef.current = nextQuery;
+    setQueryState((current) => (current === nextQuery ? current : nextQuery));
+  }, []);
+
+  const getCurrentQuery = useCallback(() => queryRef.current, []);
+
+  const setResult = useCallback((nextResult: QueryResult | null) => {
+    setResultState(nextResult);
+    if (!nextResult) {
+      setLastResultQuery(null);
+    }
+  }, []);
+
   const runQuery = useCallback(async (
     config: ConnectionConfig,
-    connectedRef: React.MutableRefObject<boolean>,
+    connectedRef: MutableRefObject<boolean>,
     readOnlyMode: boolean,
     onSuccess?: (result: QueryResult, executedQuery: string) => void | Promise<void>,
     options?: QueryExecutionOptions
   ): Promise<{ success: boolean; status: string }> => {
-    const targetQuery = options?.queryOverride ?? query;
+    const targetQuery = options?.queryOverride ?? queryRef.current;
     const startedAt = new Date().toISOString();
 
     const fail = (status: string) => {
@@ -104,7 +134,8 @@ export function useQueryExecution(): UseQueryExecutionReturn {
 
     try {
       const queryResult = await executeQuery(config, targetQuery);
-      setResult(queryResult);
+      setResultState(queryResult);
+      setLastResultQuery(targetQuery);
 
       if (onSuccess) {
         await onSuccess(queryResult, targetQuery);
@@ -124,7 +155,7 @@ export function useQueryExecution(): UseQueryExecutionReturn {
     } finally {
       setLoading(false);
     }
-  }, [query]);
+  }, []);
 
   const exportToCSV = useCallback(() => {
     if (!result) return;
@@ -175,7 +206,7 @@ export function useQueryExecution(): UseQueryExecutionReturn {
 
   const handleTableClick = useCallback((tableName: string) => {
     setQuery(`SELECT * FROM ${tableName} LIMIT ${DEFAULTS.QUERY_LIMIT};`);
-  }, []);
+  }, [setQuery]);
 
   const handleTableInsert = useCallback((tableName: string) => {
     if (insertSnippet) {
@@ -184,7 +215,7 @@ export function useQueryExecution(): UseQueryExecutionReturn {
     } else {
       setQuery(`INSERT INTO ${tableName} (column1, column2) VALUES (value1, value2);`);
     }
-  }, [insertSnippet]);
+  }, [insertSnippet, setQuery]);
 
   const handleTableUpdate = useCallback((tableName: string) => {
     if (insertSnippet) {
@@ -193,7 +224,7 @@ export function useQueryExecution(): UseQueryExecutionReturn {
     } else {
       setQuery(`UPDATE ${tableName} SET column1 = value1 WHERE condition;`);
     }
-  }, [insertSnippet]);
+  }, [insertSnippet, setQuery]);
 
   const handleTableDelete = useCallback((tableName: string) => {
     if (insertSnippet) {
@@ -202,7 +233,7 @@ export function useQueryExecution(): UseQueryExecutionReturn {
     } else {
       setQuery(`DELETE FROM ${tableName} WHERE condition;`);
     }
-  }, [insertSnippet]);
+  }, [insertSnippet, setQuery]);
 
   const handleColumnClick = useCallback((tableName: string, columnName: string) => {
     if (insertAtCursor) {
@@ -213,10 +244,14 @@ export function useQueryExecution(): UseQueryExecutionReturn {
   return {
     query,
     setQuery,
+    setQueryDraft,
+    commitQuery,
+    getCurrentQuery,
     result,
     setResult,
     loading,
     lastExecution,
+    lastResultQuery,
     insertAtCursor,
     setInsertAtCursor: (fn) => setInsertAtCursor(() => fn),
     insertSnippet,

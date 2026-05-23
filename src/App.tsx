@@ -160,6 +160,7 @@ export default function App() {
   const handleSaveQuery = useCallback(
     async (input: SaveQueryInput) => {
       try {
+        const sourceQuery = queryExecution.getCurrentQuery();
         const params = Object.fromEntries(
           requestWorkspace.params.map((param) => [param.name, param.value])
         );
@@ -172,7 +173,7 @@ export default function App() {
           params,
         });
 
-        await storage.saveNewQuery(input.name, queryExecution.query, description);
+        await storage.saveNewQuery(input.name, sourceQuery, description);
         requestWorkspace.setRequestName(input.name);
         requestWorkspace.setCollection(input.collection || "General");
         requestWorkspace.setSafetyMode(input.safetyMode);
@@ -183,7 +184,7 @@ export default function App() {
         connection.setStatus(`Failed to save request: ${error}`);
       }
     },
-    [connection, modals, queryExecution.query, requestWorkspace, storage]
+    [connection, modals, queryExecution, requestWorkspace, storage]
   );
 
   const handleNewQuery = useCallback(
@@ -203,7 +204,7 @@ export default function App() {
 
   // Direct save without opening the modal — reuses every field the modal
   // would have collected from the current workspace state.
-  const saveCurrentRequest = useCallback(async () => {
+  const saveCurrentRequest = useCallback(async (sourceQuery = queryExecution.getCurrentQuery()) => {
     try {
       const name = requestWorkspace.requestName.trim();
       if (!name) {
@@ -221,21 +222,23 @@ export default function App() {
         connectionName: connection.config.name || null,
         params,
       });
-      await storage.saveNewQuery(name, queryExecution.query, description);
+      await storage.saveNewQuery(name, sourceQuery, description);
       connection.setStatus(`Saved "${name}"`);
     } catch (error) {
       connection.setStatus(`Failed to save: ${error}`);
     }
-  }, [connection, modals, queryExecution.query, requestWorkspace, storage]);
+  }, [connection, modals, queryExecution, requestWorkspace, storage]);
 
   // Cmd+S entry point. Direct-saves a named request, prompts otherwise.
-  const handleSaveShortcut = useCallback(() => {
+  const handleSaveShortcut = useCallback((sourceQuery = queryExecution.getCurrentQuery()) => {
+    queryExecution.commitQuery(sourceQuery);
+
     if (hasNamedRequest) {
-      saveCurrentRequest();
+      saveCurrentRequest(sourceQuery);
     } else {
       modals.openModal("saveModal");
     }
-  }, [hasNamedRequest, modals, saveCurrentRequest]);
+  }, [hasNamedRequest, modals, queryExecution, saveCurrentRequest]);
 
   const handleNewCollection = useCallback(async () => {
     const name = window.prompt("New collection name?");
@@ -358,9 +361,10 @@ export default function App() {
     connection.setStatus(status);
   }, [connection, layout.readOnlyMode, queryExecution, requestWorkspace, storage]);
 
-  const runQuery = useCallback(async () => {
-    await executeQueryText(queryExecution.query);
-  }, [executeQueryText, queryExecution.query]);
+  const runQuery = useCallback(async (sourceQuery = queryExecution.getCurrentQuery()) => {
+    queryExecution.commitQuery(sourceQuery);
+    await executeQueryText(sourceQuery);
+  }, [executeQueryText, queryExecution]);
 
   // Keyboard shortcuts (must be after runQuery is defined)
   useEffect(() => {
@@ -570,6 +574,17 @@ export default function App() {
           {/* Sidebar toggle */}
           <div data-tauri-drag-region="false">
             <SidebarTrigger />
+          </div>
+          <Separator orientation="vertical" className="h-5" />
+
+          <div className="flex items-center gap-1.5 pr-1" aria-label="Query">
+            <img
+              src="/query-logo.svg"
+              alt=""
+              draggable={false}
+              className="h-6 w-7 object-contain"
+            />
+            <span className="text-sm font-semibold tracking-normal">Query</span>
           </div>
           <Separator orientation="vertical" className="h-5" />
 
@@ -797,14 +812,16 @@ export default function App() {
                         onSafetyModeChange={requestWorkspace.setSafetyMode}
                         onMaxRowsChange={requestWorkspace.setMaxRows}
                         onVimModeChange={layout.setVimMode}
-                        onSave={handleSaveShortcut}
-                        onRun={runQuery}
+                        onSave={() => handleSaveShortcut()}
+                        onRun={() => runQuery()}
                       />
                       <div className="flex-1">
                         <SqlEditor
                           value={queryExecution.query}
-                          onChange={queryExecution.setQuery}
+                          onChange={queryExecution.commitQuery}
+                          onDraftChange={queryExecution.setQueryDraft}
                           onRunQuery={runQuery}
+                          onSaveQuery={handleSaveShortcut}
                           schema={connection.schema}
                           onEditorReady={(insertAt, insertSnip) => {
                             queryExecution.setInsertAtCursor(insertAt);
@@ -920,7 +937,7 @@ export default function App() {
                       compact={layout.compactView}
                       config={connection.config}
                       schema={connection.schema}
-                      originalQuery={queryExecution.query}
+                      originalQuery={queryExecution.lastResultQuery ?? undefined}
                       onRefresh={runQuery}
                       isLoading={queryExecution.loading}
                     />

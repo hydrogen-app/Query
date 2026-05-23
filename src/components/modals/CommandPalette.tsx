@@ -1,11 +1,5 @@
 import { memo, useEffect, useMemo, useRef, useState } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "../ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../ui/dialog";
 import {
   Command,
   CommandEmpty,
@@ -69,8 +63,7 @@ const COMMAND_GLOBALS =
 function buildQuery(table: string, action: Action, columns: string[]): string {
   switch (action) {
     case "SELECT": {
-      const cols =
-        columns.includes(ALL_COLUMNS) || columns.length === 0 ? "*" : columns.join(", ");
+      const cols = columns.includes(ALL_COLUMNS) || columns.length === 0 ? "*" : columns.join(", ");
       return `SELECT ${cols} FROM ${table} LIMIT ${DEFAULTS.QUERY_LIMIT};`;
     }
     case "COUNT":
@@ -133,10 +126,7 @@ export const CommandPalette = memo(function CommandPalette({
     [savedQueries]
   );
 
-  const recentHistory = useMemo(
-    () => history.slice(0, DEFAULTS.RECENT_HISTORY_LIMIT),
-    [history]
-  );
+  const recentHistory = useMemo(() => history.slice(0, DEFAULTS.RECENT_HISTORY_LIMIT), [history]);
 
   const handleSelectTable = (info: TableInfo) => {
     setTable(info);
@@ -215,8 +205,8 @@ export const CommandPalette = memo(function CommandPalette({
     step === "root"
       ? "Search tables, saved queries, or history..."
       : step === "action"
-      ? `Pick an action for ${table?.table_name ?? "the table"}...`
-      : "";
+        ? `Pick an action for ${table?.table_name ?? "the table"}...`
+        : "";
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -236,13 +226,13 @@ export const CommandPalette = memo(function CommandPalette({
         </DialogHeader>
 
         {/* Step indicator with breadcrumb chain, always visible */}
-        <div className="flex items-center justify-between gap-2 border-b px-3 py-1.5 text-[11px] text-muted-foreground">
-          <div className="flex items-center gap-2 min-w-0">
+        <div className="text-muted-foreground flex items-center justify-between gap-2 border-b px-3 py-1.5 text-[11px]">
+          <div className="flex min-w-0 items-center gap-2">
             {step !== "root" && (
               <button
                 type="button"
                 onClick={handleBack}
-                className="flex shrink-0 items-center gap-1 rounded px-1 py-0.5 hover:bg-accent hover:text-foreground"
+                className="hover:bg-accent hover:text-foreground flex shrink-0 items-center gap-1 rounded px-1 py-0.5"
               >
                 <ArrowLeft className="h-3 w-3" />
                 Back
@@ -255,14 +245,14 @@ export const CommandPalette = memo(function CommandPalette({
               <span className="text-muted-foreground/40">›</span>
               <span className={step === "columns" ? "text-foreground" : ""}>Columns</span>
               {breadcrumbs && (
-                <span className="ml-2 truncate text-foreground/70">{breadcrumbs}</span>
+                <span className="text-foreground/70 ml-2 truncate">{breadcrumbs}</span>
               )}
             </div>
           </div>
-          <span className="hidden shrink-0 text-muted-foreground/70 sm:inline">
-            <kbd className="rounded border bg-muted px-1">↵</kbd> select
+          <span className="text-muted-foreground/70 hidden shrink-0 sm:inline">
+            <kbd className="bg-muted rounded border px-1">↵</kbd> select
             <span className="mx-1.5">·</span>
-            <kbd className="rounded border bg-muted px-1">esc</kbd>{" "}
+            <kbd className="bg-muted rounded border px-1">esc</kbd>{" "}
             {step === "root" ? "close" : "back"}
           </span>
         </div>
@@ -294,7 +284,7 @@ export const CommandPalette = memo(function CommandPalette({
                 {tableCommands.length === 0 && step === "root" ? (
                   <div className="flex flex-col items-center gap-1 py-4">
                     <p className="text-sm">No tables available</p>
-                    <p className="text-xs text-muted-foreground">Connect to a database first</p>
+                    <p className="text-muted-foreground text-xs">Connect to a database first</p>
                   </div>
                 ) : (
                   <p className="text-sm">No matches</p>
@@ -314,7 +304,7 @@ export const CommandPalette = memo(function CommandPalette({
                           <TableIcon className="h-4 w-4" />
                           <div className="flex flex-col">
                             <span className="font-medium">{info.table_name}</span>
-                            <span className="text-xs text-muted-foreground">
+                            <span className="text-muted-foreground text-xs">
                               {info.columns.length} columns
                             </span>
                           </div>
@@ -330,8 +320,7 @@ export const CommandPalette = memo(function CommandPalette({
                         {sortedSavedQueries.map((saved) => {
                           const description =
                             getRequestDescription(saved) ||
-                            saved.query.substring(0, 60) +
-                              (saved.query.length > 60 ? "..." : "");
+                            saved.query.substring(0, 60) + (saved.query.length > 60 ? "..." : "");
                           const collection = getRequestCollection(saved);
                           return (
                             <CommandItem
@@ -340,10 +329,10 @@ export const CommandPalette = memo(function CommandPalette({
                               onSelect={() => handleSelectSaved(saved)}
                             >
                               <BookmarkIcon className="h-4 w-4" />
-                              {saved.is_pinned && <Pin className="h-3 w-3 text-yellow-500" />}
+                              {saved.is_pinned && <Pin className="text-status-warning h-3 w-3" />}
                               <div className="flex flex-col">
                                 <span className="font-medium">{saved.name}</span>
-                                <span className="text-xs text-muted-foreground">
+                                <span className="text-muted-foreground text-xs">
                                   {collection} / {description}
                                 </span>
                               </div>
@@ -371,7 +360,7 @@ export const CommandPalette = memo(function CommandPalette({
                               <HistoryIcon className="h-4 w-4" />
                               <div className="flex flex-col">
                                 <span className="font-mono text-xs">{label}</span>
-                                <span className="text-xs text-muted-foreground">
+                                <span className="text-muted-foreground text-xs">
                                   {entry.row_count} rows in {entry.execution_time_ms}ms
                                 </span>
                               </div>
@@ -401,7 +390,7 @@ export const CommandPalette = memo(function CommandPalette({
                       )}
                       <div className="flex flex-col">
                         <span className="font-mono text-sm font-medium">{entry.label}</span>
-                        <span className="text-xs text-muted-foreground">{entry.description}</span>
+                        <span className="text-muted-foreground text-xs">{entry.description}</span>
                       </div>
                     </CommandItem>
                   ))}
@@ -455,9 +444,7 @@ function ColumnsStep({
     const term = search.trim().toLowerCase();
     if (!term) return rows;
     return rows.filter(
-      (row) =>
-        row.name.toLowerCase().includes(term) ||
-        row.description.toLowerCase().includes(term)
+      (row) => row.name.toLowerCase().includes(term) || row.description.toLowerCase().includes(term)
     );
   }, [rows, search]);
 
@@ -474,9 +461,7 @@ function ColumnsStep({
   // Keep the highlighted row in view while navigating with the keyboard.
   useEffect(() => {
     if (!listRef.current) return;
-    const node = listRef.current.querySelector<HTMLElement>(
-      `[data-row-index="${highlighted}"]`
-    );
+    const node = listRef.current.querySelector<HTMLElement>(`[data-row-index="${highlighted}"]`);
     node?.scrollIntoView({ block: "nearest" });
   }, [highlighted]);
 
@@ -568,10 +553,10 @@ function ColumnsStep({
       <div
         ref={listRef}
         tabIndex={-1}
-        className="max-h-[300px] overflow-y-auto p-1 outline-none focus:bg-muted/10"
+        className="focus:bg-muted/10 max-h-[300px] overflow-y-auto p-1 outline-none"
       >
         {filtered.length === 0 ? (
-          <div className="py-6 text-center text-sm text-muted-foreground">No matches</div>
+          <div className="text-muted-foreground py-6 text-center text-sm">No matches</div>
         ) : (
           filtered.map((row, idx) => {
             const checked = selectedColumns.has(row.name);
@@ -590,12 +575,12 @@ function ColumnsStep({
                   isHighlighted && "bg-accent text-accent-foreground"
                 )}
               >
-                <span className="flex h-4 w-4 items-center justify-center rounded-sm border bg-background">
+                <span className="bg-background flex h-4 w-4 items-center justify-center rounded-sm border">
                   {checked && <Check className="h-3 w-3" />}
                 </span>
                 <div className="flex flex-col">
                   <span className="font-mono text-sm">{row.name}</span>
-                  <span className="text-xs text-muted-foreground">{row.description}</span>
+                  <span className="text-muted-foreground text-xs">{row.description}</span>
                 </div>
               </div>
             );
@@ -603,21 +588,21 @@ function ColumnsStep({
         )}
       </div>
 
-      <div className="flex items-center justify-between gap-2 border-t bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+      <div className="bg-muted/30 text-muted-foreground flex items-center justify-between gap-2 border-t px-3 py-2 text-xs">
         <span className="truncate font-mono">
           {action} {previewColumns} FROM {table.table_name}
         </span>
         <div className="flex items-center gap-3">
           <span>
-            <kbd className="rounded border bg-background px-1">Tab</kbd> focus ·{" "}
-            <kbd className="rounded border bg-background px-1">Space</kbd> check ·{" "}
-            <kbd className="rounded border bg-background px-1">Enter</kbd> paste ·{" "}
-            <kbd className="rounded border bg-background px-1">Esc</kbd> back
+            <kbd className="bg-background rounded border px-1">Tab</kbd> focus ·{" "}
+            <kbd className="bg-background rounded border px-1">Space</kbd> check ·{" "}
+            <kbd className="bg-background rounded border px-1">Enter</kbd> paste ·{" "}
+            <kbd className="bg-background rounded border px-1">Esc</kbd> back
           </span>
           <button
             type="button"
             onClick={onInsert}
-            className="flex items-center gap-1 rounded border bg-background px-2 py-1 font-medium text-foreground hover:bg-accent"
+            className="bg-background text-foreground hover:bg-accent flex items-center gap-1 rounded border px-2 py-1 font-medium"
           >
             <ClipboardPaste className="h-3 w-3" />
             Insert

@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Query is a keyboard-driven, fast desktop SQL client with saved requests, environments, Cmd+K, and IntelliSense."
+    />
+    <link rel="canonical" href="https://querydb.dev/" />
+    <meta property="og:title" content="Query - Desktop SQL Client" />
+    <meta
+      property="og:description"
+      content="Keyboard-driven SQL. Fast by default."
+    />
+    <meta property="og:url" content="https://querydb.dev/" />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary" />
+    <title>Query - Desktop SQL Client</title>
+    <link rel="icon" type="image/svg+xml" href="./assets/query-logo.svg" />
+    <link rel="icon" type="image/png" href="./assets/query-logo.png" />
+    <link rel="apple-touch-icon" href="./assets/apple-touch-icon.png" />
+    <link rel="stylesheet" href="./styles.css" />
+    <script type="module" src="./app.js"></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="#top" aria-label="Query home">
+        <img src="./assets/query-logo.svg" alt="" />
+        <span>Query</span>
+      </a>
+      <nav aria-label="Primary navigation">
+        <a href="#install">Install</a>
+        <a href="#features">Shortcuts</a>
+        <a href="https://github.com/wsoule/Query">GitHub</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero" id="top">
+        <div class="hero-copy">
+          <p class="eyebrow">Keyboard-driven SQL</p>
+          <h1>Query</h1>
+          <p class="lede">Fast because everything is a shortcut.</p>
+          <div class="shortcut-strip" aria-label="Core shortcuts">
+            <kbd>Cmd K</kbd>
+            <kbd>Cmd Enter</kbd>
+            <kbd>Cmd S</kbd>
+            <kbd>Cmd /</kbd>
+            <kbd>VIM</kbd>
+          </div>
+          <div class="hero-actions" aria-label="Install actions">
+            <a
+              class="button primary"
+              href="https://github.com/wsoule/Query/releases/download/v0.1.0-local.1/Query_0.1.0_x64.dmg"
+            >
+              Download macOS x64
+            </a>
+            <a class="button secondary" href="#install">Install options</a>
+          </div>
+          <div class="hero-command">
+            <code>brew install --cask wsoule/tap/query</code>
+            <button type="button" data-copy="brew install --cask wsoule/tap/query">
+              Copy
+            </button>
+          </div>
+        </div>
+
+        <!-- Replace this placeholder with a real screenshot image when ready. -->
+        <figure class="screenshot-slot" aria-label="Query app screenshot">
+          <div class="screenshot-placeholder">
+            <span>Screenshot</span>
+          </div>
+        </figure>
+      </section>
+
+      <section class="install-section" id="install">
+        <div class="section-heading">
+          <p class="eyebrow">Download</p>
+          <h2>Install</h2>
+        </div>
+        <div class="install-grid">
+          <article class="script-block download-card">
+            <h3>macOS x64</h3>
+            <p>Signed and notarized.</p>
+            <a
+              class="button primary"
+              href="https://github.com/wsoule/Query/releases/download/v0.1.0-local.1/Query_0.1.0_x64.dmg"
+            >
+              Download DMG
+            </a>
+          </article>
+
+          <article class="script-block">
+            <h3>One line</h3>
+            <pre><code>brew install --cask wsoule/tap/query</code></pre>
+            <button type="button" data-copy="brew install --cask wsoule/tap/query">
+              Copy
+            </button>
+          </article>
+
+          <article class="script-block">
+            <h3>Tap first</h3>
+            <pre><code>brew tap wsoule/tap
+brew install --cask query</code></pre>
+            <button type="button" data-copy="brew tap wsoule/tap&#10;brew install --cask query">
+              Copy
+            </button>
+          </article>
+
+          <article class="script-block">
+            <h3>Update</h3>
+            <pre><code>brew update
+brew upgrade --cask query</code></pre>
+            <button type="button" data-copy="brew update&#10;brew upgrade --cask query">
+              Copy
+            </button>
+          </article>
+        </div>
+      </section>
+
+      <section class="features-section" id="features">
+        <div class="section-heading">
+          <p class="eyebrow">Keyboard first</p>
+          <h2>No waiting. No digging.</h2>
+        </div>
+        <div class="feature-grid">
+          <article>
+            <h3>Cmd+K</h3>
+            <p>Open anything.</p>
+          </article>
+          <article>
+            <h3>Cmd+Enter</h3>
+            <p>Run now.</p>
+          </article>
+          <article>
+            <h3>Cmd+S</h3>
+            <p>Save the request.</p>
+          </article>
+          <article>
+            <h3>Environments</h3>
+            <p>Switch fast.</p>
+          </article>
+          <article>
+            <h3>IntelliSense</h3>
+            <p>Type less.</p>
+          </article>
+          <article>
+            <h3>Vim mode</h3>
+            <p>Stay on the home row.</p>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <span>Query 0.1.0</span>
+      <a href="/LOG.md">Log</a>
+      <a href="https://github.com/wsoule/Query">GitHub</a>
+    </footer>
+  </body>
+</html>

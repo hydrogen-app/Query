@@ -1,5 +1,5 @@
-import { useEffect, useMemo } from 'react';
-import * as React from 'react';
+import { useEffect, useMemo } from "react";
+import * as React from "react";
 import {
   ReactFlow,
   Node,
@@ -10,11 +10,11 @@ import {
   useEdgesState,
   ConnectionMode,
   MarkerType,
-} from '@xyflow/react';
-import dagre from 'dagre';
-import type { DatabaseSchema, ColumnInfo } from '../../types';
-import { TableNode } from './TableNode';
-import '@xyflow/react/dist/style.css';
+} from "@xyflow/react";
+import dagre from "dagre";
+import type { DatabaseSchema, ColumnInfo } from "../../types";
+import { TableNode } from "./TableNode";
+import "@xyflow/react/dist/style.css";
 
 // Type for table node data
 interface TableNodeData {
@@ -38,7 +38,7 @@ const nodeHeightPerColumn = 24; // Height per column row
 const maxVisibleColumns = 10; // Max columns to show before "more..."
 
 const getLayoutedElements = (nodes: Node[], edges: Edge[]) => {
-  dagreGraph.setGraph({ rankdir: 'TB', ranksep: 100, nodesep: 80 });
+  dagreGraph.setGraph({ rankdir: "TB", ranksep: 100, nodesep: 80 });
 
   nodes.forEach((node) => {
     // Calculate dynamic height based on number of columns and expansion state
@@ -58,7 +58,8 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[]) => {
       extraRow = totalColumns > maxVisibleColumns ? 1 : 0; // +1 for expand button
     }
 
-    const height = nodeHeightBase + (columnCount * nodeHeightPerColumn) + (extraRow * nodeHeightPerColumn);
+    const height =
+      nodeHeightBase + columnCount * nodeHeightPerColumn + extraRow * nodeHeightPerColumn;
     dagreGraph.setNode(node.id, { width: nodeWidth, height });
   });
 
@@ -84,7 +85,8 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[]) => {
       extraRow = totalColumns > maxVisibleColumns ? 1 : 0;
     }
 
-    const height = nodeHeightBase + (columnCount * nodeHeightPerColumn) + (extraRow * nodeHeightPerColumn);
+    const height =
+      nodeHeightBase + columnCount * nodeHeightPerColumn + extraRow * nodeHeightPerColumn;
     node.position = {
       x: nodeWithPosition.x - nodeWidth / 2,
       y: nodeWithPosition.y - height / 2,
@@ -130,7 +132,7 @@ export function ErdDiagram({ schema }: ErdDiagramProps) {
     // Create nodes from tables
     const newNodes: Node[] = schema.tables.map((table) => ({
       id: table.table_name,
-      type: 'table',
+      type: "table",
       data: {
         label: table.table_name,
         columns: table.columns,
@@ -149,26 +151,26 @@ export function ErdDiagram({ schema }: ErdDiagramProps) {
             id: `${fk.table_name}-${fk.column_name}-${fk.foreign_table_name}`,
             source: fk.table_name,
             target: fk.foreign_table_name,
-            type: 'smoothstep',
+            type: "smoothstep",
             animated: false,
             style: {
-              stroke: '#a78bfa',
+              stroke: "var(--primary)",
               strokeWidth: 2,
             },
             markerEnd: {
               type: MarkerType.ArrowClosed,
-              color: '#a78bfa',
+              color: "var(--primary)",
               width: 20,
               height: 20,
             },
             label: `${fk.column_name} → ${fk.foreign_column_name}`,
             labelStyle: {
-              fill: '#a78bfa',
+              fill: "var(--primary)",
               fontSize: 11,
               fontWeight: 500,
             },
             labelBgStyle: {
-              fill: '#0a0a0f',
+              fill: "var(--card)",
               fillOpacity: 0.9,
             },
           });
@@ -177,10 +179,7 @@ export function ErdDiagram({ schema }: ErdDiagramProps) {
     });
 
     // Apply Dagre layout
-    const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
-      newNodes,
-      newEdges
-    );
+    const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(newNodes, newEdges);
 
     setNodes(layoutedNodes);
     setEdges(layoutedEdges);
@@ -188,17 +187,17 @@ export function ErdDiagram({ schema }: ErdDiagramProps) {
 
   if (!schema || !schema.tables || schema.tables.length === 0) {
     return (
-      <div className="flex h-full items-center justify-center text-muted-foreground">
+      <div className="text-muted-foreground flex h-full items-center justify-center">
         <div className="text-center">
           <p className="text-lg font-medium">No schema available</p>
-          <p className="text-sm mt-2">Connect to a database to view the ERD</p>
+          <p className="mt-2 text-sm">Connect to a database to view the ERD</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="h-full w-full bg-[#0a0a0f]">
+    <div className="bg-background h-full w-full">
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -210,15 +209,15 @@ export function ErdDiagram({ schema }: ErdDiagramProps) {
         minZoom={0.1}
         maxZoom={2}
         defaultEdgeOptions={{
-          type: 'smoothstep',
+          type: "smoothstep",
           animated: false,
         }}
       >
         <Background
-          color="#3f3f46"
+          color="var(--border)"
           gap={16}
           size={1}
-          style={{ backgroundColor: '#0a0a0f' }}
+          style={{ backgroundColor: "var(--background)" }}
         />
         <Controls />
       </ReactFlow>

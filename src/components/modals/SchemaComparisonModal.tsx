@@ -1,21 +1,9 @@
 import { useState, memo } from "react";
 import { WARNING_SEVERITY } from "../../constants";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "../ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Button } from "../ui/button";
 import { Label } from "../ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { Badge } from "../ui/badge";
 import type { ConnectionConfig, SchemaComparison } from "../../types";
@@ -104,37 +92,35 @@ export const SchemaComparisonModal = memo(function SchemaComparisonModal({
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "Added":
-        return <CheckCircle2 className="w-4 h-4 text-green-500" />;
+        return <CheckCircle2 className="text-status-success h-4 w-4" />;
       case "Removed":
-        return <XCircle className="w-4 h-4 text-red-500" />;
+        return <XCircle className="text-status-error h-4 w-4" />;
       case "Modified":
-        return <MinusCircle className="w-4 h-4 text-yellow-500" />;
+        return <MinusCircle className="text-status-warning h-4 w-4" />;
       default:
-        return <CheckCircle2 className="w-4 h-4 text-gray-500" />;
+        return <CheckCircle2 className="text-muted-foreground h-4 w-4" />;
     }
   };
 
   const getSeverityColor = (severity: string) => {
     switch (severity) {
       case "High":
-        return "bg-red-500";
+        return "bg-status-error";
       case "Medium":
-        return "bg-yellow-500";
+        return "bg-status-warning";
       case "Low":
-        return "bg-blue-500";
+        return "bg-query-select";
       default:
-        return "bg-gray-500";
+        return "bg-muted";
     }
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] max-w-6xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Schema Comparison</DialogTitle>
-          <DialogDescription>
-            Compare database schemas between two connections
-          </DialogDescription>
+          <DialogDescription>Compare database schemas between two connections</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6">
@@ -142,10 +128,7 @@ export const SchemaComparisonModal = memo(function SchemaComparisonModal({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Source (From)</Label>
-              <Select
-                value={sourceConnectionName}
-                onValueChange={setSourceConnectionName}
-              >
+              <Select value={sourceConnectionName} onValueChange={setSourceConnectionName}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select source connection" />
                 </SelectTrigger>
@@ -161,10 +144,7 @@ export const SchemaComparisonModal = memo(function SchemaComparisonModal({
 
             <div className="space-y-2">
               <Label>Target (To)</Label>
-              <Select
-                value={targetConnectionName}
-                onValueChange={setTargetConnectionName}
-              >
+              <Select value={targetConnectionName} onValueChange={setTargetConnectionName}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select target connection" />
                 </SelectTrigger>
@@ -186,14 +166,14 @@ export const SchemaComparisonModal = memo(function SchemaComparisonModal({
               disabled={comparing || !sourceConnectionName || !targetConnectionName}
               className="flex-1"
             >
-              {comparing && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              {comparing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Compare Schemas
             </Button>
           </div>
 
           {/* Error Message */}
           {error && (
-            <div className="p-4 bg-red-500/10 border border-red-500/50 rounded-lg text-red-400 text-sm">
+            <div className="bg-status-error/10 border-status-error/40 text-status-error rounded-lg border p-4 text-sm">
               {error}
             </div>
           )}
@@ -218,23 +198,19 @@ export const SchemaComparisonModal = memo(function SchemaComparisonModal({
               {/* Summary Tab */}
               <TabsContent value="summary" className="space-y-4">
                 <div className="grid grid-cols-3 gap-4">
-                  <div className="p-4 bg-gray-800 rounded-lg border border-gray-700">
-                    <div className="text-sm text-gray-400 mb-1">Tables</div>
+                  <div className="bg-card border-border rounded-lg border p-4">
+                    <div className="text-muted-foreground mb-1 text-sm">Tables</div>
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <CheckCircle2 className="w-4 h-4 text-green-500" />
-                        <span className="text-sm">
-                          {comparison.summary.tables_added} added
-                        </span>
+                        <CheckCircle2 className="text-status-success h-4 w-4" />
+                        <span className="text-sm">{comparison.summary.tables_added} added</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <XCircle className="w-4 h-4 text-red-500" />
-                        <span className="text-sm">
-                          {comparison.summary.tables_removed} removed
-                        </span>
+                        <XCircle className="text-status-error h-4 w-4" />
+                        <span className="text-sm">{comparison.summary.tables_removed} removed</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <MinusCircle className="w-4 h-4 text-yellow-500" />
+                        <MinusCircle className="text-status-warning h-4 w-4" />
                         <span className="text-sm">
                           {comparison.summary.tables_modified} modified
                         </span>
@@ -242,20 +218,18 @@ export const SchemaComparisonModal = memo(function SchemaComparisonModal({
                     </div>
                   </div>
 
-                  <div className="p-4 bg-gray-800 rounded-lg border border-gray-700">
-                    <div className="text-sm text-gray-400 mb-1">Indexes</div>
+                  <div className="bg-card border-border rounded-lg border p-4">
+                    <div className="text-muted-foreground mb-1 text-sm">Indexes</div>
                     <div className="text-2xl font-semibold">
                       {comparison.summary.indexes_missing}
                     </div>
-                    <div className="text-xs text-gray-500">changes detected</div>
+                    <div className="text-muted-foreground text-xs">changes detected</div>
                   </div>
 
-                  <div className="p-4 bg-gray-800 rounded-lg border border-gray-700">
-                    <div className="text-sm text-gray-400 mb-1">Views</div>
-                    <div className="text-2xl font-semibold">
-                      {comparison.summary.views_changed}
-                    </div>
-                    <div className="text-xs text-gray-500">changed</div>
+                  <div className="bg-card border-border rounded-lg border p-4">
+                    <div className="text-muted-foreground mb-1 text-sm">Views</div>
+                    <div className="text-2xl font-semibold">{comparison.summary.views_changed}</div>
+                    <div className="text-muted-foreground text-xs">changed</div>
                   </div>
                 </div>
               </TabsContent>
@@ -266,9 +240,9 @@ export const SchemaComparisonModal = memo(function SchemaComparisonModal({
                   {comparison.table_differences.map((tableDiff) => (
                     <div
                       key={tableDiff.table_name}
-                      className="p-4 bg-gray-800 rounded-lg border border-gray-700"
+                      className="bg-card border-border rounded-lg border p-4"
                     >
-                      <div className="flex items-center gap-2 mb-3">
+                      <div className="mb-3 flex items-center gap-2">
                         {getStatusIcon(tableDiff.status)}
                         <span className="font-semibold">{tableDiff.table_name}</span>
                         <Badge variant="outline" className="ml-auto">
@@ -278,16 +252,16 @@ export const SchemaComparisonModal = memo(function SchemaComparisonModal({
 
                       {tableDiff.column_changes.length > 0 && (
                         <div className="mt-2 space-y-1">
-                          <div className="text-xs text-gray-400">Column Changes:</div>
+                          <div className="text-muted-foreground text-xs">Column Changes:</div>
                           {tableDiff.column_changes.map((colChange) => (
                             <div
                               key={colChange.column_name}
-                              className="flex items-center gap-2 text-sm pl-4"
+                              className="flex items-center gap-2 pl-4 text-sm"
                             >
                               {getStatusIcon(colChange.status)}
                               <span>{colChange.column_name}</span>
                               {colChange.changes.length > 0 && (
-                                <span className="text-xs text-gray-500">
+                                <span className="text-muted-foreground text-xs">
                                   ({colChange.changes.join(", ")})
                                 </span>
                               )}
@@ -298,11 +272,11 @@ export const SchemaComparisonModal = memo(function SchemaComparisonModal({
 
                       {tableDiff.index_changes.length > 0 && (
                         <div className="mt-2 space-y-1">
-                          <div className="text-xs text-gray-400">Index Changes:</div>
+                          <div className="text-muted-foreground text-xs">Index Changes:</div>
                           {tableDiff.index_changes.map((idxChange) => (
                             <div
                               key={idxChange.index_name}
-                              className="flex items-center gap-2 text-sm pl-4"
+                              className="flex items-center gap-2 pl-4 text-sm"
                             >
                               {getStatusIcon(idxChange.status)}
                               <span>{idxChange.index_name}</span>
@@ -318,39 +292,34 @@ export const SchemaComparisonModal = memo(function SchemaComparisonModal({
               {/* Warnings Tab */}
               <TabsContent value="warnings" className="space-y-3">
                 {comparison.warnings.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    No warnings detected
-                  </div>
+                  <div className="text-muted-foreground py-8 text-center">No warnings detected</div>
                 ) : (
                   comparison.warnings.map((warning, idx) => (
-                    <div
-                      key={idx}
-                      className="p-4 bg-gray-800 rounded-lg border border-gray-700"
-                    >
+                    <div key={idx} className="bg-card border-border rounded-lg border p-4">
                       <div className="flex items-start gap-3">
-                        <AlertTriangle className={`w-5 h-5 mt-0.5 ${
-                          warning.severity === WARNING_SEVERITY.HIGH
-                            ? "text-red-500"
-                            : warning.severity === WARNING_SEVERITY.MEDIUM
-                            ? "text-yellow-500"
-                            : "text-blue-500"
-                        }`} />
+                        <AlertTriangle
+                          className={`mt-0.5 h-5 w-5 ${
+                            warning.severity === WARNING_SEVERITY.HIGH
+                              ? "text-status-error"
+                              : warning.severity === WARNING_SEVERITY.MEDIUM
+                                ? "text-status-warning"
+                                : "text-query-select"
+                          }`}
+                        />
                         <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
+                          <div className="mb-1 flex items-center gap-2">
                             <span className="font-semibold">{warning.message}</span>
                             <Badge
                               variant="outline"
-                              className={`${getSeverityColor(warning.severity)} text-white border-0`}
+                              className={`${getSeverityColor(warning.severity)} border-0 text-white`}
                             >
                               {warning.severity}
                             </Badge>
                           </div>
                           {warning.details && (
-                            <div className="text-sm text-gray-400">
-                              {warning.details}
-                            </div>
+                            <div className="text-muted-foreground text-sm">{warning.details}</div>
                           )}
-                          <div className="text-xs text-gray-500 mt-1">
+                          <div className="text-muted-foreground mt-1 text-xs">
                             Affects: {warning.affected_object}
                           </div>
                         </div>
@@ -367,7 +336,7 @@ export const SchemaComparisonModal = memo(function SchemaComparisonModal({
                     Save Script
                   </Button>
                 </div>
-                <pre className="p-4 bg-gray-900 rounded-lg border border-gray-700 text-sm font-mono overflow-x-auto max-h-96 overflow-y-auto">
+                <pre className="bg-background border-border max-h-96 overflow-x-auto overflow-y-auto rounded-lg border p-4 font-mono text-sm">
                   {migrationScript}
                 </pre>
               </TabsContent>

@@ -57,17 +57,17 @@ export const StatusBar = memo(function StatusBar({
 
   if (!status) {
     return (
-      <div className="flex h-7 items-center gap-2 border-t border-border/50 bg-muted/20 px-4 text-[11px] text-muted-foreground">
+      <div className="border-border/50 bg-muted/20 text-muted-foreground flex h-7 items-center gap-2 border-t px-4 text-[11px]">
         <Circle
           className={cn(
             "h-2 w-2 shrink-0",
-            connected ? "fill-status-success text-status-success" : "fill-muted-foreground/50 text-muted-foreground/50"
+            connected
+              ? "fill-status-success text-status-success"
+              : "fill-muted-foreground/50 text-muted-foreground/50"
           )}
         />
         <span className="truncate">
-          {connected
-            ? `Connected to ${connectionName}`
-            : "Not connected"}
+          {connected ? `Connected to ${connectionName}` : "Not connected"}
         </span>
       </div>
     );
@@ -77,19 +77,19 @@ export const StatusBar = memo(function StatusBar({
   const Icon = level === "error" ? AlertCircle : level === "success" ? CheckCircle2 : Info;
   const toneClass =
     level === "error"
-      ? "text-rose-400"
+      ? "text-status-error"
       : level === "success"
-      ? "text-emerald-400"
-      : "text-blue-400";
+        ? "text-status-success"
+        : "text-query-select";
 
   return (
-    <div className="group flex h-7 items-center gap-2 border-t border-border/50 bg-muted/20 px-4 text-[11px]">
+    <div className="group border-border/50 bg-muted/20 flex h-7 items-center gap-2 border-t px-4 text-[11px]">
       <Icon className={cn("h-3 w-3 shrink-0", toneClass)} />
-      <span className="truncate text-foreground/90">{status}</span>
+      <span className="text-foreground/90 truncate">{status}</span>
       <button
         type="button"
         onClick={onClear}
-        className="ml-auto flex h-4 w-4 shrink-0 items-center justify-center rounded text-muted-foreground/50 opacity-0 transition-opacity hover:bg-accent hover:text-foreground group-hover:opacity-100"
+        className="text-muted-foreground/50 hover:bg-accent hover:text-foreground ml-auto flex h-4 w-4 shrink-0 items-center justify-center rounded opacity-0 transition-opacity group-hover:opacity-100"
         title="Dismiss"
       >
         <X className="h-2.5 w-2.5" />

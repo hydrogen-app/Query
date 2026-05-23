@@ -1,15 +1,7 @@
 import { lazy, Suspense, useMemo, useState } from "react";
-import type {
-  EnhancedColumnInfo,
-  SchemaComparison,
-  TableDifference,
-} from "../../types";
-import { DIFF_STATUS, WARNING_SEVERITY } from "../../constants";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "../ui/collapsible";
+import type { EnhancedColumnInfo, SchemaComparison, TableDifference } from "../../types";
+import { DIFF_STATUS, QUERY_PIERRE_DIFF_THEME_OPTIONS, WARNING_SEVERITY } from "../../constants";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../ui/collapsible";
 import { Button } from "../ui/button";
 import { ChevronRight, ChevronDown, ChevronsDownUp, ChevronsUpDown } from "lucide-react";
 import { cn } from "../../lib/utils";
@@ -47,9 +39,7 @@ export function DiffViewer({ comparison, filterMode, tableQuery = "" }: DiffView
       }
       if (filterMode === "conflicts") {
         const hasHighRiskWarning = (comparison.warnings || []).some(
-          (w) =>
-            w.severity === WARNING_SEVERITY.HIGH &&
-            w.affected_object === table.table_name
+          (w) => w.severity === WARNING_SEVERITY.HIGH && w.affected_object === table.table_name
         );
         if (!hasHighRiskWarning) return false;
       }
@@ -66,13 +56,13 @@ export function DiffViewer({ comparison, filterMode, tableQuery = "" }: DiffView
     setOpenTables(new Set());
   };
 
-  const allOpen = filteredTables.length > 0 &&
-    filteredTables.every((t) => openTables.has(t.table_name));
+  const allOpen =
+    filteredTables.length > 0 && filteredTables.every((t) => openTables.has(t.table_name));
 
   return (
-    <div className="flex flex-col h-full min-h-0">
+    <div className="flex h-full min-h-0 flex-col">
       <div className="mb-3 flex flex-shrink-0 items-center justify-between gap-2">
-        <div className="text-xs text-muted-foreground">
+        <div className="text-muted-foreground text-xs">
           Showing <span className="text-foreground">{filteredTables.length}</span> of{" "}
           {comparison.table_differences.length} tables
         </div>
@@ -97,9 +87,9 @@ export function DiffViewer({ comparison, filterMode, tableQuery = "" }: DiffView
           </Button>
         )}
       </div>
-      <div className="space-y-2 flex-1 overflow-auto min-h-0">
+      <div className="min-h-0 flex-1 space-y-2 overflow-auto">
         {filteredTables.length === 0 && (
-          <div className="rounded-lg border border-dashed py-12 text-center text-muted-foreground">
+          <div className="text-muted-foreground rounded-lg border border-dashed py-12 text-center">
             <p className="text-sm">No tables match the current filter</p>
             <p className="mt-1 text-xs">
               {tableQuery
@@ -156,16 +146,12 @@ function TableDiffRow({
   return (
     <Collapsible open={isOpen} onOpenChange={onToggle}>
       <CollapsibleTrigger className="w-full">
-        <div className="flex items-center gap-2 p-3 border rounded-lg hover:bg-accent/50 transition-colors">
-          {isOpen ? (
-            <ChevronDown className="h-4 w-4" />
-          ) : (
-            <ChevronRight className="h-4 w-4" />
-          )}
+        <div className="hover:bg-accent/50 flex items-center gap-2 rounded-lg border p-3 transition-colors">
+          {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
           <span className="font-mono font-medium">{table.table_name}</span>
           <StatusBadge status={table.status} />
           {meaningfulColumnChanges.length > 0 && (
-            <span className="text-xs text-muted-foreground ml-auto">
+            <span className="text-muted-foreground ml-auto text-xs">
               {meaningfulColumnChanges.length} column changes
             </span>
           )}
@@ -173,11 +159,11 @@ function TableDiffRow({
       </CollapsibleTrigger>
 
       <CollapsibleContent>
-        <div className="mt-2 border rounded-lg overflow-hidden">
+        <div className="mt-2 overflow-hidden rounded-lg border">
           {ddl && (
             <Suspense
               fallback={
-                <div className="px-3 py-4 text-xs text-muted-foreground">
+                <div className="text-muted-foreground px-3 py-4 text-xs">
                   Loading diff renderer…
                 </div>
               }
@@ -194,7 +180,7 @@ function TableDiffRow({
                   lang: "sql",
                 }}
                 options={{
-                  theme: "pierre-dark",
+                  ...QUERY_PIERRE_DIFF_THEME_OPTIONS,
                   diffStyle: "split",
                   diffIndicators: "bars",
                   lineDiffType: "word",
@@ -204,9 +190,9 @@ function TableDiffRow({
           )}
 
           {meaningfulColumnChanges.length > 0 && (
-            <div className="border-t p-4 bg-muted/10">
-              <div className="text-sm font-medium mb-2">Changes Detected:</div>
-              <ul className="text-sm space-y-1 text-muted-foreground">
+            <div className="bg-muted/10 border-t p-4">
+              <div className="mb-2 text-sm font-medium">Changes Detected:</div>
+              <ul className="text-muted-foreground space-y-1 text-sm">
                 {meaningfulColumnChanges.map((change, idx) => (
                   <li key={idx} className="flex items-start gap-2">
                     <StatusIcon status={change.status} />
@@ -223,9 +209,9 @@ function TableDiffRow({
           )}
 
           {table.index_changes && table.index_changes.length > 0 && (
-            <div className="border-t p-4 bg-muted/10">
-              <div className="text-sm font-medium mb-2">Index Changes:</div>
-              <ul className="text-sm space-y-1 text-muted-foreground">
+            <div className="bg-muted/10 border-t p-4">
+              <div className="mb-2 text-sm font-medium">Index Changes:</div>
+              <ul className="text-muted-foreground space-y-1 text-sm">
                 {table.index_changes.map((idx, i) => (
                   <li key={i} className="flex items-start gap-2">
                     <StatusIcon status={idx.status} />
@@ -248,10 +234,7 @@ function TableDiffRow({
  * exist only on the other side are omitted — Pierre will show that as the
  * line missing in this file, which is exactly the diff signal we want.
  */
-function buildTableDDL(
-  table: TableDifference,
-  side: "source" | "target"
-): string {
+function buildTableDDL(table: TableDifference, side: "source" | "target"): string {
   // ADDED tables exist only on target; REMOVED only on source.
   if (side === "source" && table.status === DIFF_STATUS.ADDED) return "";
   if (side === "target" && table.status === DIFF_STATUS.REMOVED) return "";
@@ -261,8 +244,7 @@ function buildTableDDL(
 
   const columnLines: string[] = [];
   for (const change of table.column_changes) {
-    const def =
-      side === "source" ? change.source_definition : change.target_definition;
+    const def = side === "source" ? change.source_definition : change.target_definition;
     if (!def) continue;
     columnLines.push(`  ${formatColumnDefinition(def)}`);
   }
@@ -300,18 +282,15 @@ function formatColumnDefinition(col: EnhancedColumnInfo): string {
 
 function StatusBadge({ status }: { status: string }) {
   const colors = {
-    added: "bg-green-500/20 text-green-400 border-green-500/50",
-    removed: "bg-red-500/20 text-red-400 border-red-500/50",
-    modified: "bg-yellow-500/20 text-yellow-400 border-yellow-500/50",
-    identical: "bg-gray-500/20 text-gray-400 border-gray-500/50",
+    added: "border-status-success/40 bg-status-success/15 text-status-success",
+    removed: "border-status-error/40 bg-status-error/15 text-status-error",
+    modified: "border-status-warning/40 bg-status-warning/15 text-status-warning",
+    identical: "border-border bg-muted/60 text-muted-foreground",
   };
   const displayText = status.charAt(0).toUpperCase() + status.slice(1);
   return (
     <span
-      className={cn(
-        "px-2 py-0.5 rounded text-xs border",
-        colors[status as keyof typeof colors]
-      )}
+      className={cn("rounded border px-2 py-0.5 text-xs", colors[status as keyof typeof colors])}
     >
       {displayText}
     </span>
@@ -320,13 +299,13 @@ function StatusBadge({ status }: { status: string }) {
 
 function StatusIcon({ status }: { status: string }) {
   if (status === DIFF_STATUS.ADDED) {
-    return <span className="text-green-400">+</span>;
+    return <span className="text-status-success">+</span>;
   }
   if (status === DIFF_STATUS.REMOVED) {
-    return <span className="text-red-400">-</span>;
+    return <span className="text-status-error">-</span>;
   }
   if (status === DIFF_STATUS.MODIFIED) {
-    return <span className="text-yellow-400">~</span>;
+    return <span className="text-status-warning">~</span>;
   }
-  return <span className="text-gray-400">•</span>;
+  return <span className="text-muted-foreground">•</span>;
 }

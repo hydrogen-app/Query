@@ -1,44 +1,48 @@
 import type { DiffStatus, WarningSeverity } from "../types";
 
 // Status badge styles
-export const STATUS_BADGE_STYLES: Record<DiffStatus, { bg: string; text: string; border: string }> = {
-  identical: {
-    bg: "bg-gray-500/20",
-    text: "text-gray-400",
-    border: "border-gray-500/30",
-  },
-  modified: {
-    bg: "bg-blue-500/20",
-    text: "text-blue-400",
-    border: "border-blue-500/30",
-  },
-  added: {
-    bg: "bg-green-500/20",
-    text: "text-green-400",
-    border: "border-green-500/30",
-  },
-  removed: {
-    bg: "bg-red-500/20",
-    text: "text-red-400",
-    border: "border-red-500/30",
-  },
-};
+export const STATUS_BADGE_STYLES: Record<DiffStatus, { bg: string; text: string; border: string }> =
+  {
+    identical: {
+      bg: "bg-muted/60",
+      text: "text-muted-foreground",
+      border: "border-border",
+    },
+    modified: {
+      bg: "bg-query-select/15",
+      text: "text-query-select",
+      border: "border-query-select/35",
+    },
+    added: {
+      bg: "bg-status-success/15",
+      text: "text-status-success",
+      border: "border-status-success/35",
+    },
+    removed: {
+      bg: "bg-status-error/15",
+      text: "text-status-error",
+      border: "border-status-error/35",
+    },
+  };
 
 // Warning severity badge styles
-export const SEVERITY_BADGE_STYLES: Record<WarningSeverity, { bg: string; text: string; icon: string }> = {
+export const SEVERITY_BADGE_STYLES: Record<
+  WarningSeverity,
+  { bg: string; text: string; icon: string }
+> = {
   high: {
-    bg: "bg-red-500/20",
-    text: "text-red-400",
+    bg: "bg-status-error/15",
+    text: "text-status-error",
     icon: "⚠️",
   },
   medium: {
-    bg: "bg-yellow-500/20",
-    text: "text-yellow-400",
+    bg: "bg-status-warning/15",
+    text: "text-status-warning",
     icon: "⚠️",
   },
   low: {
-    bg: "bg-blue-500/20",
-    text: "text-blue-400",
+    bg: "bg-query-select/15",
+    text: "text-query-select",
     icon: "ℹ️",
   },
 };

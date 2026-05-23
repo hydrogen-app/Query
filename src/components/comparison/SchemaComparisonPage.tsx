@@ -5,13 +5,7 @@ import { Badge } from "../ui/badge";
 import { Input } from "../ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { Label } from "../ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import {
   ArrowLeft,
   ArrowLeftRight,
@@ -27,10 +21,7 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { toast } from "sonner";
-import type {
-  ConnectionConfig,
-  SchemaComparison,
-} from "../../types";
+import type { ConnectionConfig, SchemaComparison } from "../../types";
 import { compareSchemas, generateMigrationSql, getConnectionPassword } from "../../utils/tauri";
 import { DiffViewer } from "./DiffViewer";
 import { ObjectSelectionTree } from "./ObjectSelectionTree";
@@ -45,14 +36,9 @@ interface SchemaComparisonPageProps {
 
 type FilterMode = "all" | "differences" | "conflicts";
 
-export function SchemaComparisonPage({
-  connections,
-  onClose,
-}: SchemaComparisonPageProps) {
-  const [sourceConnection, setSourceConnection] =
-    useState<ConnectionConfig | null>(null);
-  const [targetConnection, setTargetConnection] =
-    useState<ConnectionConfig | null>(null);
+export function SchemaComparisonPage({ connections, onClose }: SchemaComparisonPageProps) {
+  const [sourceConnection, setSourceConnection] = useState<ConnectionConfig | null>(null);
+  const [targetConnection, setTargetConnection] = useState<ConnectionConfig | null>(null);
   const [comparison, setComparison] = useState<SchemaComparison | null>(null);
   const [migrationScript, setMigrationScript] = useState<string>("");
   const [loading, setLoading] = useState(false);
@@ -121,13 +107,13 @@ export function SchemaComparisonPage({
     comparison?.warnings.filter((w) => w.severity === WARNING_SEVERITY.HIGH).length ?? 0;
 
   return (
-    <div className="fixed inset-0 z-50 bg-background flex flex-col">
+    <div className="bg-background fixed inset-0 z-50 flex flex-col">
       {/* Header */}
       <header
-        className="flex items-center justify-between gap-4 px-6 py-3 border-b"
+        className="flex items-center justify-between gap-4 border-b px-6 py-3"
         style={{ paddingTop: `${MACOS_TITLEBAR_TOP_PADDING}px` }}
       >
-        <div className="flex items-center gap-3 min-w-0">
+        <div className="flex min-w-0 items-center gap-3">
           <Button
             variant="ghost"
             size="icon"
@@ -138,9 +124,9 @@ export function SchemaComparisonPage({
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div className="min-w-0">
-            <h1 className="text-base font-semibold leading-tight">Schema Comparison</h1>
+            <h1 className="text-base leading-tight font-semibold">Schema Comparison</h1>
             {comparison && (
-              <p className="truncate text-xs text-muted-foreground">
+              <p className="text-muted-foreground truncate text-xs">
                 <span className="font-mono">{sourceConnection?.name}</span>
                 <span className="mx-1">→</span>
                 <span className="font-mono">{targetConnection?.name}</span>
@@ -183,7 +169,7 @@ export function SchemaComparisonPage({
               active={filterMode === "conflicts"}
               onClick={() => setFilterMode("conflicts")}
             />
-            <div className="mx-1 h-6 w-px bg-border" />
+            <div className="bg-border mx-1 h-6 w-px" />
             <Button
               variant={filterMode === "all" ? "default" : "outline"}
               size="sm"
@@ -222,9 +208,9 @@ export function SchemaComparisonPage({
 
       {/* Results */}
       {comparison && (
-        <div className="flex-1 overflow-hidden flex flex-col min-h-0">
-          <Tabs defaultValue="diff" className="flex-1 flex flex-col overflow-hidden">
-            <TabsList className="mx-6 mt-3 flex-shrink-0 w-fit">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <Tabs defaultValue="diff" className="flex flex-1 flex-col overflow-hidden">
+            <TabsList className="mx-6 mt-3 w-fit flex-shrink-0">
               <TabsTrigger value="diff">Diff</TabsTrigger>
               <TabsTrigger value="summary">Summary</TabsTrigger>
               <TabsTrigger value="warnings">
@@ -239,11 +225,11 @@ export function SchemaComparisonPage({
               <TabsTrigger value="objects">Objects</TabsTrigger>
             </TabsList>
 
-            <div className="flex-1 overflow-hidden px-6 py-4 min-h-0">
+            <div className="min-h-0 flex-1 overflow-hidden px-6 py-4">
               <TabsContent value="diff" className="mt-0 h-full overflow-hidden">
-                <div className="flex h-full flex-col gap-3 min-h-0">
-                  <div className="relative w-full sm:w-72 flex-shrink-0">
-                    <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                <div className="flex h-full min-h-0 flex-col gap-3">
+                  <div className="relative w-full flex-shrink-0 sm:w-72">
+                    <Search className="text-muted-foreground absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2" />
                     <Input
                       value={tableQuery}
                       onChange={(e) => setTableQuery(e.target.value)}
@@ -251,7 +237,7 @@ export function SchemaComparisonPage({
                       className="h-8 pl-8 text-xs"
                     />
                   </div>
-                  <div className="flex-1 min-h-0">
+                  <div className="min-h-0 flex-1">
                     <DiffViewer
                       comparison={comparison}
                       filterMode={filterMode}
@@ -322,11 +308,11 @@ function ConnectionPicker({
   const sameSelected = source && target && source.name === target.name;
 
   return (
-    <div className="flex-1 flex items-center justify-center p-8">
+    <div className="flex flex-1 items-center justify-center p-8">
       <div className="w-full max-w-4xl space-y-6">
-        <div className="text-center space-y-1">
+        <div className="space-y-1 text-center">
           <h2 className="text-2xl font-semibold">Compare two databases</h2>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             Pick a source and a target — we'll diff tables, columns, indexes, and routines.
           </p>
         </div>
@@ -363,19 +349,14 @@ function ConnectionPicker({
         </div>
 
         {sameSelected && (
-          <div className="flex items-center justify-center gap-2 text-xs text-amber-500">
+          <div className="text-status-warning flex items-center justify-center gap-2 text-xs">
             <AlertTriangle className="h-3.5 w-3.5" />
             Source and target are the same connection.
           </div>
         )}
 
         <div className="flex justify-center">
-          <Button
-            onClick={onCompare}
-            disabled={loading || !canCompare}
-            size="lg"
-            className="gap-2"
-          >
+          <Button onClick={onCompare} disabled={loading || !canCompare} size="lg" className="gap-2">
             <PlayCircle className="h-4 w-4" />
             {loading ? "Comparing…" : "Compare Schemas"}
           </Button>
@@ -401,11 +382,9 @@ function ConnectionCard({
   placeholder,
 }: ConnectionCardProps) {
   return (
-    <div className="rounded-lg border bg-card p-4 space-y-3">
+    <div className="bg-card space-y-3 rounded-lg border p-4">
       <div className="flex items-center justify-between">
-        <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-          {label}
-        </Label>
+        <Label className="text-muted-foreground text-xs tracking-wide uppercase">{label}</Label>
         {connection?.readOnly && (
           <Badge variant="outline" className="h-5 gap-1 px-1.5 text-[10px]">
             <Lock className="h-2.5 w-2.5" />
@@ -431,7 +410,7 @@ function ConnectionCard({
           ))}
         </SelectContent>
       </Select>
-      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+      <div className="text-muted-foreground flex items-center gap-2 text-xs">
         <Database className="h-3 w-3 shrink-0" />
         {connection ? (
           <span className="truncate font-mono">
@@ -457,10 +436,10 @@ interface StatChipProps {
 }
 
 const TONE_STYLES: Record<StatChipProps["tone"], string> = {
-  emerald: "text-emerald-400 hover:bg-emerald-500/10 border-emerald-500/30",
-  rose: "text-rose-400 hover:bg-rose-500/10 border-rose-500/30",
-  amber: "text-amber-400 hover:bg-amber-500/10 border-amber-500/30",
-  orange: "text-orange-400 hover:bg-orange-500/10 border-orange-500/30",
+  emerald: "border-status-success/35 text-status-success hover:bg-status-success/10",
+  rose: "border-status-error/35 text-status-error hover:bg-status-error/10",
+  amber: "border-status-warning/35 text-status-warning hover:bg-status-warning/10",
+  orange: "border-status-warning/35 text-status-warning hover:bg-status-warning/10",
 };
 
 function StatChip({ icon, tone, count, label, active, onClick }: StatChipProps) {
@@ -539,20 +518,20 @@ function SummaryPanel({
             key={stat.label}
             className={cn(
               "rounded-lg border p-4",
-              stat.tone === "emerald" && "border-emerald-500/20 bg-emerald-500/5",
-              stat.tone === "rose" && "border-rose-500/20 bg-rose-500/5",
-              stat.tone === "amber" && "border-amber-500/20 bg-amber-500/5",
-              stat.tone === "blue" && "border-blue-500/20 bg-blue-500/5"
+              stat.tone === "emerald" && "border-status-success/25 bg-status-success/5",
+              stat.tone === "rose" && "border-status-error/25 bg-status-error/5",
+              stat.tone === "amber" && "border-status-warning/25 bg-status-warning/5",
+              stat.tone === "blue" && "border-query-select/25 bg-query-select/5"
             )}
           >
-            <div className="flex items-center justify-between text-muted-foreground">
-              <span className="text-xs uppercase tracking-wide">{stat.label}</span>
+            <div className="text-muted-foreground flex items-center justify-between">
+              <span className="text-xs tracking-wide uppercase">{stat.label}</span>
               <span
                 className={cn(
-                  stat.tone === "emerald" && "text-emerald-400",
-                  stat.tone === "rose" && "text-rose-400",
-                  stat.tone === "amber" && "text-amber-400",
-                  stat.tone === "blue" && "text-blue-400"
+                  stat.tone === "emerald" && "text-status-success",
+                  stat.tone === "rose" && "text-status-error",
+                  stat.tone === "amber" && "text-status-warning",
+                  stat.tone === "blue" && "text-query-select"
                 )}
               >
                 {stat.icon}
@@ -567,18 +546,20 @@ function SummaryPanel({
         <h3 className="mb-2 text-sm font-medium">Overall</h3>
         <div className="flex items-center gap-4 text-sm">
           {differenceCount === 0 ? (
-            <span className="flex items-center gap-2 text-emerald-400">
+            <span className="text-status-success flex items-center gap-2">
               <CheckCircle2 className="h-4 w-4" />
               Schemas are identical
             </span>
           ) : (
             <span>
               <strong className="text-foreground">{differenceCount}</strong>{" "}
-              <span className="text-muted-foreground">object{differenceCount === 1 ? "" : "s"} differ</span>
+              <span className="text-muted-foreground">
+                object{differenceCount === 1 ? "" : "s"} differ
+              </span>
             </span>
           )}
           {conflictCount > 0 && (
-            <span className="flex items-center gap-1 text-orange-400">
+            <span className="text-status-warning flex items-center gap-1">
               <AlertTriangle className="h-4 w-4" />
               {conflictCount} high-risk warning{conflictCount === 1 ? "" : "s"}
             </span>
@@ -598,11 +579,9 @@ function ConnectionSummaryCard({
 }) {
   if (!connection) return null;
   return (
-    <div className="rounded-lg border p-4 space-y-2">
+    <div className="space-y-2 rounded-lg border p-4">
       <div className="flex items-center justify-between">
-        <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-          {label}
-        </Label>
+        <Label className="text-muted-foreground text-xs tracking-wide uppercase">{label}</Label>
         {connection.readOnly && (
           <Badge variant="outline" className="h-5 gap-1 px-1.5 text-[10px]">
             <Lock className="h-2.5 w-2.5" />
@@ -611,7 +590,7 @@ function ConnectionSummaryCard({
         )}
       </div>
       <div className="font-medium">{connection.name}</div>
-      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+      <div className="text-muted-foreground flex items-center gap-2 text-xs">
         <Database className="h-3 w-3 shrink-0" />
         <span className="truncate font-mono">
           {connection.database}@{connection.host}:{connection.port}

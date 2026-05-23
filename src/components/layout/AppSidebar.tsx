@@ -13,18 +13,8 @@ import {
   SidebarGroupContent,
   SidebarRail,
 } from "../ui/sidebar";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "../ui/collapsible";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../ui/select";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../ui/collapsible";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { ScrollArea } from "../ui/scroll-area";
 import { Button } from "../ui/button";
 import {
@@ -50,16 +40,15 @@ import {
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 import { Kbd } from "../ui/kbd";
-import type {
-  DatabaseSchema,
-  QueryHistoryEntry,
-  SavedQuery,
-  GitStatus,
-} from "../../types";
+import type { DatabaseSchema, QueryHistoryEntry, SavedQuery, GitStatus } from "../../types";
 import { getGitStatus, gitInit } from "../../utils/tauri";
 import { getRequestCollection } from "../../utils/queryRequest";
 import { GitCommitModal } from "../modals/GitCommitModal";
-import { SIDEBAR_FOOTER_HEIGHT, GIT_STATUS_POLL_INTERVAL, MESSAGE_AUTO_CLEAR_DELAY } from "../../constants";
+import {
+  SIDEBAR_FOOTER_HEIGHT,
+  GIT_STATUS_POLL_INTERVAL,
+  MESSAGE_AUTO_CLEAR_DELAY,
+} from "../../constants";
 
 interface AppSidebarProps {
   schema: DatabaseSchema | null;
@@ -233,7 +222,7 @@ export const AppSidebar = memo(function AppSidebar({
                       <SidebarMenuButton>
                         <Database className="h-4 w-4" />
                         <span>Tables</span>
-                        <span className="ml-auto text-xs text-muted-foreground">
+                        <span className="text-muted-foreground ml-auto text-xs">
                           {schema?.tables.length || 0}
                         </span>
                         <Plus className="ml-2 h-4 w-4 group-data-[state=open]/collapsible:hidden" />
@@ -254,20 +243,18 @@ export const AppSidebar = memo(function AppSidebar({
                                 <CollapsibleTrigger asChild>
                                   <SidebarMenuSubButton>
                                     <ChevronRight className="h-3 w-3 transition-transform group-data-[state=open]/table:rotate-90" />
-                                    <span className="font-mono text-xs">
-                                      {table.table_name}
-                                    </span>
-                                    <span className="ml-auto text-xs text-muted-foreground">
+                                    <span className="font-mono text-xs">{table.table_name}</span>
+                                    <span className="text-muted-foreground ml-auto text-xs">
                                       {table.columns.length}
                                     </span>
                                   </SidebarMenuSubButton>
                                 </CollapsibleTrigger>
                                 <CollapsibleContent>
-                                  <div className="ml-6 mt-1 space-y-1">
+                                  <div className="mt-1 ml-6 space-y-1">
                                     {/* Quick Actions */}
                                     <div className="flex gap-1.5 px-2 py-1">
                                       <Kbd
-                                        className={`cursor-pointer text-[10px] px-1.5 py-0 h-5 border pointer-events-auto transition-colors ${queryBadgeStyles.SELECT}`}
+                                        className={`pointer-events-auto h-5 cursor-pointer border px-1.5 py-0 text-[10px] transition-colors ${queryBadgeStyles.SELECT}`}
                                         onClick={(e) => {
                                           e.stopPropagation();
                                           onTableClick(table.table_name);
@@ -276,7 +263,7 @@ export const AppSidebar = memo(function AppSidebar({
                                         SEL
                                       </Kbd>
                                       <Kbd
-                                        className={`cursor-pointer text-[10px] px-1.5 py-0 h-5 border pointer-events-auto transition-colors ${queryBadgeStyles.INSERT}`}
+                                        className={`pointer-events-auto h-5 cursor-pointer border px-1.5 py-0 text-[10px] transition-colors ${queryBadgeStyles.INSERT}`}
                                         onClick={(e) => {
                                           e.stopPropagation();
                                           onTableInsert?.(table.table_name);
@@ -285,7 +272,7 @@ export const AppSidebar = memo(function AppSidebar({
                                         INS
                                       </Kbd>
                                       <Kbd
-                                        className={`cursor-pointer text-[10px] px-1.5 py-0 h-5 border pointer-events-auto transition-colors ${queryBadgeStyles.UPDATE}`}
+                                        className={`pointer-events-auto h-5 cursor-pointer border px-1.5 py-0 text-[10px] transition-colors ${queryBadgeStyles.UPDATE}`}
                                         onClick={(e) => {
                                           e.stopPropagation();
                                           onTableUpdate?.(table.table_name);
@@ -294,7 +281,7 @@ export const AppSidebar = memo(function AppSidebar({
                                         UPD
                                       </Kbd>
                                       <Kbd
-                                        className={`cursor-pointer text-[10px] px-1.5 py-0 h-5 border pointer-events-auto transition-colors ${queryBadgeStyles.DELETE}`}
+                                        className={`pointer-events-auto h-5 cursor-pointer border px-1.5 py-0 text-[10px] transition-colors ${queryBadgeStyles.DELETE}`}
                                         onClick={(e) => {
                                           e.stopPropagation();
                                           onTableDelete?.(table.table_name);
@@ -307,18 +294,15 @@ export const AppSidebar = memo(function AppSidebar({
                                     {table.columns.map((col) => (
                                       <div
                                         key={col.column_name}
-                                        className="flex items-center justify-between px-2 py-1 hover:bg-muted rounded cursor-pointer text-xs"
+                                        className="hover:bg-muted flex cursor-pointer items-center justify-between rounded px-2 py-1 text-xs"
                                         onClick={() =>
-                                          onColumnClick(
-                                            table.table_name,
-                                            col.column_name,
-                                          )
+                                          onColumnClick(table.table_name, col.column_name)
                                         }
                                       >
-                                        <span className="font-mono text-muted-foreground">
+                                        <span className="text-muted-foreground font-mono">
                                           {col.column_name}
                                         </span>
-                                        <span className="text-xs text-muted-foreground">
+                                        <span className="text-muted-foreground text-xs">
                                           {col.data_type}
                                         </span>
                                       </div>
@@ -330,8 +314,8 @@ export const AppSidebar = memo(function AppSidebar({
                           ))
                         ) : (
                           <div className="flex flex-col items-center gap-1 px-4 py-4 text-center">
-                            <Database className="h-4 w-4 text-muted-foreground/40" />
-                            <span className="text-[11px] text-muted-foreground">
+                            <Database className="text-muted-foreground/40 h-4 w-4" />
+                            <span className="text-muted-foreground text-[11px]">
                               Connect a database to browse tables
                             </span>
                           </div>
@@ -349,7 +333,7 @@ export const AppSidebar = memo(function AppSidebar({
                         <SidebarMenuButton>
                           <BookmarkIcon className="h-4 w-4" />
                           <span>Collections</span>
-                          <span className="ml-auto text-xs text-muted-foreground">
+                          <span className="text-muted-foreground ml-auto text-xs">
                             {savedQueries.length}
                           </span>
                           <ChevronRight className="ml-2 h-3 w-3 transition-transform group-data-[state=open]/collapsible:rotate-90" />
@@ -360,7 +344,7 @@ export const AppSidebar = memo(function AppSidebar({
                           <button
                             type="button"
                             onClick={(e) => e.stopPropagation()}
-                            className="mr-1 flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-foreground"
+                            className="text-muted-foreground hover:bg-accent hover:text-foreground mr-1 flex h-6 w-6 items-center justify-center rounded"
                             title="Add"
                           >
                             <Plus className="h-3.5 w-3.5" />
@@ -382,12 +366,13 @@ export const AppSidebar = memo(function AppSidebar({
                       <SidebarMenuSub>
                         {savedQueryGroups.length === 0 ? (
                           <div className="flex flex-col items-center gap-1 px-4 py-4 text-center">
-                            <BookmarkIcon className="h-4 w-4 text-muted-foreground/40" />
-                            <span className="text-[11px] text-muted-foreground">
+                            <BookmarkIcon className="text-muted-foreground/40 h-4 w-4" />
+                            <span className="text-muted-foreground text-[11px]">
                               No collections yet
                             </span>
-                            <span className="text-[10px] text-muted-foreground/70">
-                              Click <Plus className="inline h-2.5 w-2.5 align-text-bottom" /> above to add one
+                            <span className="text-muted-foreground/70 text-[10px]">
+                              Click <Plus className="inline h-2.5 w-2.5 align-text-bottom" /> above
+                              to add one
                             </span>
                           </div>
                         ) : (
@@ -402,11 +387,9 @@ export const AppSidebar = memo(function AppSidebar({
                                   <CollapsibleTrigger asChild className="flex-1">
                                     <SidebarMenuSubButton>
                                       <ChevronRight className="h-3 w-3 transition-transform group-data-[state=open]/collection:rotate-90" />
-                                      <Folder className="h-3.5 w-3.5 text-muted-foreground" />
-                                      <span className="flex-1 truncate text-xs">
-                                        {collection}
-                                      </span>
-                                      <span className="text-xs text-muted-foreground">
+                                      <Folder className="text-muted-foreground h-3.5 w-3.5" />
+                                      <span className="flex-1 truncate text-xs">{collection}</span>
+                                      <span className="text-muted-foreground text-xs">
                                         {queries.length}
                                       </span>
                                     </SidebarMenuSubButton>
@@ -417,16 +400,16 @@ export const AppSidebar = memo(function AppSidebar({
                                       e.stopPropagation();
                                       onNewQuery(collection);
                                     }}
-                                    className="mr-1 flex h-5 w-5 items-center justify-center rounded text-muted-foreground opacity-0 transition-opacity hover:bg-accent hover:text-foreground group-hover/collection-row:opacity-100"
+                                    className="text-muted-foreground hover:bg-accent hover:text-foreground mr-1 flex h-5 w-5 items-center justify-center rounded opacity-0 transition-opacity group-hover/collection-row:opacity-100"
                                     title={`New query in ${collection}`}
                                   >
                                     <Plus className="h-3 w-3" />
                                   </button>
                                 </div>
                                 <CollapsibleContent>
-                                  <div className="ml-4 mt-1 space-y-1">
+                                  <div className="mt-1 ml-4 space-y-1">
                                     {queries.length === 0 && (
-                                      <div className="px-2 py-1 text-[10px] text-muted-foreground">
+                                      <div className="text-muted-foreground px-2 py-1 text-[10px]">
                                         Empty collection
                                       </div>
                                     )}
@@ -439,14 +422,14 @@ export const AppSidebar = memo(function AppSidebar({
                                           className="group/query flex gap-2"
                                         >
                                           <Kbd
-                                            className={`text-[10px] px-1.5 py-0 h-4 ${tag.className} border`}
+                                            className={`h-4 px-1.5 py-0 text-[10px] ${tag.className} border`}
                                           >
                                             {tag.label}
                                           </Kbd>
                                           {savedQuery.is_pinned && (
-                                            <Pin className="h-3 w-3 shrink-0 text-yellow-500" />
+                                            <Pin className="text-status-warning h-3 w-3 shrink-0" />
                                           )}
-                                          <span className="flex-1 min-w-0 truncate text-xs">
+                                          <span className="min-w-0 flex-1 truncate text-xs">
                                             {savedQuery.name}
                                           </span>
                                           <button
@@ -466,7 +449,7 @@ export const AppSidebar = memo(function AppSidebar({
                                               e.stopPropagation();
                                               onDeleteQuery(savedQuery.id);
                                             }}
-                                            className="text-xs opacity-0 transition-opacity hover:text-red-400 group-hover/query:opacity-100"
+                                            className="hover:text-status-error text-xs opacity-0 transition-opacity group-hover/query:opacity-100"
                                             title="Delete request"
                                           >
                                             ×
@@ -492,7 +475,7 @@ export const AppSidebar = memo(function AppSidebar({
                       <SidebarMenuButton>
                         <HistoryIcon className="h-4 w-4" />
                         <span>History</span>
-                        <span className="ml-auto text-xs text-muted-foreground">
+                        <span className="text-muted-foreground ml-auto text-xs">
                           {history.length}
                         </span>
                         <Plus className="ml-2 h-4 w-4 group-data-[state=open]/collapsible:hidden" />
@@ -503,11 +486,11 @@ export const AppSidebar = memo(function AppSidebar({
                       <SidebarMenuSub>
                         {history.length === 0 ? (
                           <div className="flex flex-col items-center gap-1 px-4 py-4 text-center">
-                            <HistoryIcon className="h-4 w-4 text-muted-foreground/40" />
-                            <span className="text-[11px] text-muted-foreground">
+                            <HistoryIcon className="text-muted-foreground/40 h-4 w-4" />
+                            <span className="text-muted-foreground text-[11px]">
                               No queries yet
                             </span>
-                            <span className="text-[10px] text-muted-foreground/70">
+                            <span className="text-muted-foreground/70 text-[10px]">
                               Run something and it'll show up here
                             </span>
                           </div>
@@ -519,10 +502,10 @@ export const AppSidebar = memo(function AppSidebar({
                                   onClick={() => onSelectQuery(entry.query)}
                                   className="flex gap-2"
                                 >
-                                  <span className="flex-1 min-w-0 truncate text-xs font-mono">
+                                  <span className="min-w-0 flex-1 truncate font-mono text-xs">
                                     {entry.query}
                                   </span>
-                                  <span className="text-xs text-muted-foreground whitespace-nowrap">
+                                  <span className="text-muted-foreground text-xs whitespace-nowrap">
                                     {entry.execution_time_ms}ms
                                   </span>
                                 </SidebarMenuSubButton>
@@ -531,7 +514,7 @@ export const AppSidebar = memo(function AppSidebar({
                             <SidebarMenuSubItem>
                               <SidebarMenuSubButton
                                 onClick={onClearHistory}
-                                className="text-xs text-red-400 hover:text-red-300"
+                                className="text-status-error hover:text-status-error/80 text-xs"
                               >
                                 Clear History
                               </SidebarMenuSubButton>
@@ -550,12 +533,12 @@ export const AppSidebar = memo(function AppSidebar({
 
       <SidebarFooter className="border-t">
         {gitStatus && gitStatus.is_repo ? (
-          <div className="px-3 py-3 space-y-2">
+          <div className="space-y-2 px-3 py-3">
             <div className="flex items-center gap-2 text-sm">
-              <GitBranch className="h-4 w-4 text-muted-foreground" />
+              <GitBranch className="text-muted-foreground h-4 w-4" />
               <div className="flex-1">
-                <div className="font-medium text-sm">{gitStatus.branch}</div>
-                <div className="text-xs text-muted-foreground">
+                <div className="text-sm font-medium">{gitStatus.branch}</div>
+                <div className="text-muted-foreground text-xs">
                   {gitStatus.staged + gitStatus.unstaged + gitStatus.untracked === 0
                     ? "No changes"
                     : `${gitStatus.staged + gitStatus.unstaged + gitStatus.untracked} changes`}
@@ -572,7 +555,7 @@ export const AppSidebar = memo(function AppSidebar({
                   setShowCommitModal(true);
                 }}
                 disabled={gitStatus.staged + gitStatus.unstaged + gitStatus.untracked === 0}
-                className="flex-1 h-7 gap-1 text-xs"
+                className="h-7 flex-1 gap-1 text-xs"
                 title="Commit changes"
               >
                 <GitCommit className="h-3 w-3" />
@@ -585,7 +568,9 @@ export const AppSidebar = memo(function AppSidebar({
                   setGitError(null);
                   setGitSuccess(null);
                   try {
-                    const message = await import("../../utils/tauri").then(({ gitPush }) => gitPush());
+                    const message = await import("../../utils/tauri").then(({ gitPush }) =>
+                      gitPush()
+                    );
                     setGitSuccess(message);
                     const status = await getGitStatus();
                     setGitStatus(status);
@@ -593,7 +578,7 @@ export const AppSidebar = memo(function AppSidebar({
                     setGitError(error instanceof Error ? error.message : String(error));
                   }
                 }}
-                className="flex-1 h-7 gap-1 text-xs"
+                className="h-7 flex-1 gap-1 text-xs"
                 title="Push to remote"
               >
                 <Upload className="h-3 w-3" />
@@ -606,7 +591,9 @@ export const AppSidebar = memo(function AppSidebar({
                   setGitError(null);
                   setGitSuccess(null);
                   try {
-                    const message = await import("../../utils/tauri").then(({ gitPull }) => gitPull());
+                    const message = await import("../../utils/tauri").then(({ gitPull }) =>
+                      gitPull()
+                    );
                     setGitSuccess(message);
                     const status = await getGitStatus();
                     setGitStatus(status);
@@ -614,7 +601,7 @@ export const AppSidebar = memo(function AppSidebar({
                     setGitError(error instanceof Error ? error.message : String(error));
                   }
                 }}
-                className="flex-1 h-7 gap-1 text-xs"
+                className="h-7 flex-1 gap-1 text-xs"
                 title="Pull from remote"
               >
                 <Download className="h-3 w-3" />
@@ -623,10 +610,8 @@ export const AppSidebar = memo(function AppSidebar({
             </div>
           </div>
         ) : (
-          <div className="px-3 py-3 space-y-2">
-            <div className="text-xs text-muted-foreground text-center">
-              Not a git repository
-            </div>
+          <div className="space-y-2 px-3 py-3">
+            <div className="text-muted-foreground text-center text-xs">Not a git repository</div>
             <Button
               variant="outline"
               size="sm"
@@ -647,7 +632,7 @@ export const AppSidebar = memo(function AppSidebar({
                 }
               }}
               disabled={initializing}
-              className="w-full h-8 gap-2 text-xs"
+              className="h-8 w-full gap-2 text-xs"
               title="Initialize git repository"
             >
               <GitBranch className="h-3 w-3" />
@@ -659,12 +644,12 @@ export const AppSidebar = memo(function AppSidebar({
         {(gitError || gitSuccess) && (
           <div className="px-3 pb-3">
             {gitError && (
-              <div className="p-2 rounded-md text-xs bg-status-error/10 border border-status-error/30 text-status-error">
+              <div className="bg-status-error/10 border-status-error/30 text-status-error rounded-md border p-2 text-xs">
                 {gitError}
               </div>
             )}
             {gitSuccess && (
-              <div className="p-2 rounded-md text-xs bg-status-success/10 border border-status-success/30 text-status-success">
+              <div className="bg-status-success/10 border-status-success/30 text-status-success rounded-md border p-2 text-xs">
                 {gitSuccess}
               </div>
             )}

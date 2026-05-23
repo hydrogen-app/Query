@@ -2,6 +2,7 @@ import { memo, useEffect, useState } from "react";
 import { PatchDiff } from "@pierre/diffs/react";
 import { FileQuestion } from "lucide-react";
 import { getGitDiff } from "../../utils/tauri";
+import { QUERY_PIERRE_DIFF_THEME_OPTIONS } from "../../constants";
 
 interface GitDiffViewerProps {
   filePath: string;
@@ -52,12 +53,12 @@ export const GitDiffViewer = memo(function GitDiffViewer({ filePath }: GitDiffVi
   }, [filePath]);
 
   if (loading) {
-    return <div className="px-3 py-3 text-xs text-muted-foreground">Loading diff…</div>;
+    return <div className="text-muted-foreground px-3 py-3 text-xs">Loading diff…</div>;
   }
 
   if (error) {
     return (
-      <div className="rounded border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+      <div className="border-destructive/40 bg-destructive/10 text-destructive rounded border px-3 py-2 text-xs">
         {error}
       </div>
     );
@@ -67,10 +68,10 @@ export const GitDiffViewer = memo(function GitDiffViewer({ filePath }: GitDiffVi
 
   if (kind === "binary") {
     return (
-      <div className="flex items-start gap-2 rounded border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs">
-        <FileQuestion className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-500" />
+      <div className="border-status-warning/30 bg-status-warning/10 flex items-start gap-2 rounded border px-3 py-2 text-xs">
+        <FileQuestion className="text-status-warning mt-0.5 h-3.5 w-3.5 shrink-0" />
         <div className="flex flex-col gap-1">
-          <span className="font-medium text-foreground">Binary file — diff not available</span>
+          <span className="text-foreground font-medium">Binary file — diff not available</span>
           <span className="text-muted-foreground">
             Saved queries live inside <code className="font-mono">saved_queries.db</code> (SQLite),
             so git can only see the database as one binary blob. To get per-query diffs we'd need to
@@ -82,17 +83,15 @@ export const GitDiffViewer = memo(function GitDiffViewer({ filePath }: GitDiffVi
   }
 
   if (kind === "empty") {
-    return (
-      <div className="px-3 py-2 text-xs text-muted-foreground">No textual changes.</div>
-    );
+    return <div className="text-muted-foreground px-3 py-2 text-xs">No textual changes.</div>;
   }
 
   return (
-    <div className="overflow-hidden rounded border bg-background text-xs">
+    <div className="bg-background overflow-hidden rounded border text-xs">
       <PatchDiff
         patch={patch!}
         options={{
-          theme: "pierre-dark",
+          ...QUERY_PIERRE_DIFF_THEME_OPTIONS,
           diffStyle: "unified",
           diffIndicators: "bars",
         }}

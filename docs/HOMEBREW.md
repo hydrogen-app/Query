@@ -1,44 +1,100 @@
 # Homebrew Distribution
 
-This guide explains how to distribute Query via Homebrew Cask.
+Query is distributed through Homebrew as a cask because the release artifact is
+a signed and notarized macOS `.app` inside a `.dmg`.
 
-## Option 1: Add to homebrew-cask (Public)
+## Tap
 
-For maximum reach, submit to the official homebrew-cask repository:
+The current tap is:
 
-1. After your first release, create a PR to [homebrew-cask](https://github.com/Homebrew/homebrew-cask)
-2. Add a file at `Casks/q/query.rb` with the formula below
-3. The Homebrew team will review and merge
-
-Users can then install with:
 ```bash
-brew install --cask query
+brew tap wsoule/tap
+brew install --cask wsoule/tap/query
 ```
 
-## Option 2: Create Your Own Tap (Faster)
+Tap repository:
 
-Create your own Homebrew tap for faster releases:
+```text
+https://github.com/wsoule/homebrew-tap
+```
 
-### 1. Create a new repository
+Source repository:
 
-Create `homebrew-tap` repository on GitHub (e.g., `your-username/homebrew-tap`)
+```text
+https://github.com/wsoule/Query
+```
 
-### 2. Add the Cask formula
+## Release Flow
 
-Create `Casks/query.rb` in your tap repository:
+The release workflow in `.github/workflows/release.yml` publishes Query to the
+tap when a `v*` tag is pushed.
+
+For each release, the workflow:
+
+1. Creates a draft GitHub release.
+2. Builds macOS artifacts for Apple Silicon and Intel.
+3. Signs and notarizes the macOS DMGs.
+4. Builds Windows and Linux artifacts.
+5. Publishes the GitHub release.
+6. Downloads the signed macOS DMGs.
+7. Computes SHA256 checksums.
+8. Writes `Casks/query.rb` in `wsoule/homebrew-tap`.
+9. Commits and pushes the cask update.
+
+## Required GitHub Secrets
+
+Set these on `wsoule/Query` under:
+
+```text
+Settings -> Secrets and variables -> Actions
+```
+
+Required:
+
+```text
+APPLE_CERTIFICATE
+APPLE_CERTIFICATE_PASSWORD
+KEYCHAIN_PASSWORD
+APPLE_SIGNING_IDENTITY
+APPLE_ID
+APPLE_PASSWORD
+APPLE_TEAM_ID
+HOMEBREW_TAP_TOKEN
+```
+
+Optional, only needed for Tauri in-app updates:
+
+```text
+TAURI_SIGNING_PRIVATE_KEY
+TAURI_SIGNING_PRIVATE_KEY_PASSWORD
+```
+
+`HOMEBREW_TAP_TOKEN` should be a fine-grained GitHub personal access token with
+read/write Contents access to `wsoule/homebrew-tap`.
+
+## Manual Cask Shape
+
+CI generates this file automatically after a release exists:
+
+```text
+Casks/query.rb
+```
+
+The generated cask has this shape:
 
 ```ruby
 cask "query" do
   arch arm: "aarch64", intel: "x64"
 
   version "0.1.0"
-  sha256 arm:   "REPLACE_WITH_ARM64_SHA256",
-         intel: "REPLACE_WITH_X64_SHA256"
+  sha256 arm:   "ARM64_SHA256",
+         intel: "X64_SHA256"
 
-  url "https://github.com/YOUR_USERNAME/Query/releases/download/v#{version}/Query_#{version}_#{arch}.dmg"
+  url "https://github.com/wsoule/Query/releases/download/v#{version}/Query_#{version}_#{arch}.dmg",
+      verified: "github.com/wsoule/Query/"
   name "Query"
-  desc "Modern PostgreSQL client built with Tauri"
-  homepage "https://github.com/YOUR_USERNAME/Query"
+  desc "Modern SQL database client with git-friendly saved queries"
+  homepage "https://github.com/wsoule/Query"
 
   livecheck do
     url :url
@@ -55,60 +111,39 @@ cask "query" do
     "~/Library/Caches/com.brassraven.query",
     "~/Library/Preferences/com.brassraven.query.plist",
     "~/Library/Saved Application State/com.brassraven.query.savedState",
+    "~/Library/HTTPStorages/com.brassraven.query",
+    "~/Library/WebKit/com.brassraven.query",
   ]
 end
 ```
 
-### 3. Generate SHA256 hashes
+Do not commit placeholder checksums. Commit the cask only after the release DMGs
+exist and the real SHA256 values are known.
 
-After each release, update the sha256 values:
+## Local Verification
 
-```bash
-# Download and hash the DMGs
-curl -sL "https://github.com/YOUR_USERNAME/Query/releases/download/v0.1.0/Query_0.1.0_aarch64.dmg" | shasum -a 256
-curl -sL "https://github.com/YOUR_USERNAME/Query/releases/download/v0.1.0/Query_0.1.0_x64.dmg" | shasum -a 256
-```
-
-### 4. Users install from your tap
+Before tagging:
 
 ```bash
-brew tap your-username/tap
-brew install --cask query
+bun run build
+cargo build --manifest-path src-tauri/Cargo.toml
 ```
 
-## Automating Updates
+After CI publishes the release and tap update:
 
-Add this workflow to automatically update your Homebrew tap when you release:
-
-`.github/workflows/update-homebrew.yml`:
-
-```yaml
-name: Update Homebrew
-
-on:
-  release:
-    types: [published]
-
-jobs:
-  update-homebrew:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Update Homebrew formula
-        uses: dawidd6/action-homebrew-bump-formula@v3
-        with:
-          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
-          tap: your-username/tap
-          formula: query
-          tag: ${{ github.event.release.tag_name }}
+```bash
+brew tap wsoule/tap
+brew install --cask wsoule/tap/query
+spctl --assess --type execute -vv /Applications/Query.app
+codesign --verify --strict --deep --verbose=2 /Applications/Query.app
 ```
 
-Create a personal access token with `repo` scope and add it as `HOMEBREW_TAP_TOKEN` secret.
+## Release Checklist
 
-## Version Checklist
-
-When releasing a new version:
-
-1. Update version in `package.json` and `tauri.conf.json`
-2. Create git tag: `git tag v0.2.0 && git push origin v0.2.0`
-3. Wait for GitHub Actions to build and publish release
-4. Update Homebrew formula sha256 hashes (or use automation above)
+1. Update versions in `package.json`, `src-tauri/Cargo.toml`, and `src-tauri/tauri.conf.json`.
+2. Commit the version bump.
+3. Tag the release, for example `git tag v0.1.0`.
+4. Push `main` and tags with `git push origin main --tags`.
+5. Wait for the release workflow to finish.
+6. Pull `wsoule/homebrew-tap` and verify `Casks/query.rb`.
+7. Install with `brew install --cask wsoule/tap/query`.

@@ -87,6 +87,21 @@ function syncParamsWithQuery(query: string, params: QueryParameter[]): QueryPara
   return names.map((name) => byName.get(name) ?? { name, value: "", enabled: true });
 }
 
+function areParamsEqual(a: QueryParameter[], b: QueryParameter[]): boolean {
+  return (
+    a.length === b.length &&
+    a.every((param, index) => {
+      const other = b[index];
+      return (
+        other &&
+        param.name === other.name &&
+        param.value === other.value &&
+        param.enabled === other.enabled
+      );
+    })
+  );
+}
+
 function makeStorageKey(projectPath: string | null): string {
   return `query:request-workspace:${projectPath || "default"}`;
 }
@@ -119,10 +134,10 @@ export function useRequestWorkspace(
   }, [hydratedKey, storageKey, workspace]);
 
   useEffect(() => {
-    setWorkspace((current) => ({
-      ...current,
-      params: syncParamsWithQuery(query, current.params),
-    }));
+    setWorkspace((current) => {
+      const params = syncParamsWithQuery(query, current.params);
+      return areParamsEqual(current.params, params) ? current : { ...current, params };
+    });
   }, [query]);
 
   const activeEnvironment = useMemo(() => {
