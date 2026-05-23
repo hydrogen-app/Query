@@ -6,7 +6,7 @@
   <true/>
   <key>com.apple.security.keychain-access-groups</key>
   <array>
-    <string>$(AppIdentifierPrefix)com.brassraven.query</string>
+    <string>$(AppIdentifierPrefix)dev.querydb.query</string>
   </array>
   <key>com.apple.security.network.client</key>
   <true/>

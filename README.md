@@ -55,7 +55,7 @@ Before running Query, ensure you have the following installed:
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/brass-raven/Query
+   git clone https://github.com/wsoule/Query
    cd Query
    ```
 

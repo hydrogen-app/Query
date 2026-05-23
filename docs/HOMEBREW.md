@@ -101,18 +101,18 @@ cask "query" do
     strategy :github_latest
   end
 
-  depends_on macos: ">= :monterey"
+  depends_on macos: :monterey
 
   app "Query.app"
 
   zap trash: [
     "~/.query",
-    "~/Library/Application Support/com.brassraven.query",
-    "~/Library/Caches/com.brassraven.query",
-    "~/Library/Preferences/com.brassraven.query.plist",
-    "~/Library/Saved Application State/com.brassraven.query.savedState",
-    "~/Library/HTTPStorages/com.brassraven.query",
-    "~/Library/WebKit/com.brassraven.query",
+    "~/Library/Application Support/dev.querydb.query",
+    "~/Library/Caches/dev.querydb.query",
+    "~/Library/HTTPStorages/dev.querydb.query",
+    "~/Library/Preferences/dev.querydb.query.plist",
+    "~/Library/Saved Application State/dev.querydb.query.savedState",
+    "~/Library/WebKit/dev.querydb.query",
   ]
 end
 ```
