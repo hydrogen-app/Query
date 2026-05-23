@@ -249,7 +249,9 @@ code {
 }
 
 .screenshot-slot {
+  justify-self: end;
   min-width: 0;
+  width: min(100%, 540px);
   margin: 0;
 }
 
@@ -257,7 +259,7 @@ code {
   display: block;
   width: 100%;
   height: auto;
-  aspect-ratio: 3540 / 2134;
+  aspect-ratio: 1400 / 844;
   border: 1px solid var(--line);
   border-radius: 12px;
   background: var(--surface);
@@ -354,6 +356,11 @@ footer a {
     grid-template-columns: 1fr;
     gap: 34px;
     min-height: auto;
+  }
+
+  .screenshot-slot {
+    justify-self: center;
+    width: min(100%, 620px);
   }
 
   .install-grid,
